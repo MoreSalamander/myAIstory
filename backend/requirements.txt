@@ -1,0 +1,5 @@
+# my-AI-story backend — phase 1 (schemas + verifiers).
+# Deliberately tiny: the verify/ package depends on nothing but the schema
+# layer. Pydantic provides the typed contracts; pytest runs the gates' tests.
+pydantic>=2.6
+pytest>=8.0
