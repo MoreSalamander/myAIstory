@@ -15,7 +15,8 @@ from myAIstory.synth import ScriptedLLM
 
 # --- canned model output -----------------------------------------------------
 
-def bible_json(theme: str = "dragons") -> str:
+def frame_json(theme: str = "dragons") -> str:
+    """A bible FRAME — cast + world, arc deliberately empty (planned per-beat)."""
     return json.dumps({
         "series_id": "ignored-overwritten-by-slug",
         "title": "The Ember Cycle",
@@ -28,10 +29,19 @@ def bible_json(theme: str = "dragons") -> str:
              "status": "alive", "facts": []},
         ],
         "world_facts": [],
-        "arc": [{"episode": 1, "summary": "Ember finds the hoard."},
-                {"episode": 2, "summary": "Ash challenges Ember."}],
+        "arc": [],
         "episode_count": 2,
     })
+
+
+def arc_beat_json(episode: int, summary: str | None = None) -> str:
+    return json.dumps({"episode": episode,
+                       "summary": summary or f"Episode {episode} beat (dragons)."})
+
+
+def arc_beats(n: int = 2) -> list[str]:
+    """One canned beat response per episode for the arc map step."""
+    return [arc_beat_json(k) for k in range(1, n + 1)]
 
 
 def episode_json(number: int = 1, beats=None, words: int = 130) -> str:
@@ -68,11 +78,12 @@ def _types(events: list[dict]) -> list[str]:
 
 def test_init_success(seed):
     events, emit = _capture()
-    llm = ScriptedLLM({"bible_draft": [bible_json()]})
+    llm = ScriptedLLM({"bible_draft": [frame_json()], "arc_beat": arc_beats(2)})
     bible = run_init(seed.model_dump(), llm, emit, persist=False)
     assert bible is not None
     assert bible.theme == "dragons"
     assert bible.series_id == "the-ember-cycle"  # pinned to deterministic slug
+    assert [b.episode for b in bible.arc] == [1, 2]  # arc assembled from the map
     assert "verify_pass" in _types(events)
 
 
@@ -87,23 +98,50 @@ def test_init_rejects_bad_seed(seed):
     assert any(e["type"] == "done" and e["result"] == "rejected" for e in events)
 
 
-def test_init_retries_then_succeeds(seed):
+def test_init_frame_retries_then_succeeds(seed):
     events, emit = _capture()
-    llm = ScriptedLLM({"bible_draft": [bible_json(theme="vampires"), bible_json()]})
+    llm = ScriptedLLM({"bible_draft": [frame_json(theme="vampires"), frame_json()],
+                       "arc_beat": arc_beats(2)})
     bible = run_init(seed.model_dump(), llm, emit, max_retries=2, persist=False)
     assert bible is not None and bible.theme == "dragons"
-    assert len(llm.calls) == 2
+    # 2 frame calls (1 bad + 1 good) + 2 beat calls (one per episode).
+    assert len(llm.calls) == 4
     t = _types(events)
     assert "verify_fail" in t and "retry" in t and "verify_pass" in t
 
 
-def test_init_skips_after_budget(seed):
+def test_init_skips_after_frame_budget(seed):
     events, emit = _capture()
-    llm = ScriptedLLM({"bible_draft": [bible_json(theme="vampires")] * 3})
+    llm = ScriptedLLM({"bible_draft": [frame_json(theme="vampires")] * 3})
     bible = run_init(seed.model_dump(), llm, emit, max_retries=2, persist=False)
     assert bible is None
-    assert len(llm.calls) == 3  # initial + 2 retries
+    assert len(llm.calls) == 3  # initial + 2 retries, arc never reached
     assert any(e["type"] == "skip" for e in events)
+
+
+def test_init_arc_beat_retries_then_succeeds(seed):
+    events, emit = _capture()
+    # Episode-2 beat is mislabeled "3" the first time → arc_verify fails, retry.
+    llm = ScriptedLLM({
+        "bible_draft": [frame_json()],
+        "arc_beat": [arc_beat_json(1), arc_beat_json(3), arc_beat_json(2)],
+    })
+    bible = run_init(seed.model_dump(), llm, emit, max_retries=2, persist=False)
+    assert bible is not None
+    assert [b.episode for b in bible.arc] == [1, 2]
+    assert "retry" in _types(events)
+
+
+def test_init_skips_when_arc_beat_exhausts_budget(seed):
+    events, emit = _capture()
+    # The episode-1 beat is always mislabeled → arc_verify never passes.
+    llm = ScriptedLLM({
+        "bible_draft": [frame_json()],
+        "arc_beat": [arc_beat_json(9)] * 3,
+    })
+    bible = run_init(seed.model_dump(), llm, emit, max_retries=2, persist=False)
+    assert bible is None
+    assert any(e["type"] == "skip" and e.get("stage") == "arc_plan" for e in events)
 
 
 # --- run_episode -------------------------------------------------------------
@@ -150,7 +188,8 @@ def test_episode_json_parse_failure_retries(bible):
 def test_series_end_to_end(seed):
     events, emit = _capture()
     llm = ScriptedLLM({
-        "bible_draft": [bible_json()],
+        "bible_draft": [frame_json()],
+        "arc_beat": arc_beats(2),
         "episode_draft": [episode_json(1), episode_json(2)],
     })
     bible, episodes = run_series(seed.model_dump(), llm, emit,
@@ -163,7 +202,8 @@ def test_series_one_skip_continues(seed):
     events, emit = _capture()
     # Episode 1 fails all 3 attempts (skip); episode 2 succeeds.
     llm = ScriptedLLM({
-        "bible_draft": [bible_json()],
+        "bible_draft": [frame_json()],
+        "arc_beat": arc_beats(2),
         "episode_draft": [bad_episode_json(1)] * 3 + [episode_json(2)],
     })
     bible, episodes = run_series(seed.model_dump(), llm, emit,

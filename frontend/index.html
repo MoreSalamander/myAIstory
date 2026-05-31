@@ -161,17 +161,21 @@ function handleEvent(e) {
       $("status").textContent = `${e.pipeline} run started — ${e.series_id}`;
       logEvent(`${badge("b-run", e.pipeline)} <span class="stage">run_start</span> <span class="msg">${e.series_id}${e.number ? " · ep " + e.number : ""}</span>`);
       break;
-    case "step_start":
+    case "step_start": {
       if (e.stage.endsWith("_draft")) { draftStage = e.stage; $("draft").textContent = ""; }
-      logEvent(`<span class="stage">${e.stage}</span> <span class="msg">…</span>`);
+      const prog = (e.index && e.total) ? ` (beat ${e.index}/${e.total})` : "";
+      logEvent(`<span class="stage">${e.stage}${prog}</span> <span class="msg">…</span>`);
       break;
+    }
     case "token":
       $("draft").textContent += e.text;
       $("draft").scrollTop = $("draft").scrollHeight;
       break;
-    case "step_complete":
-      logEvent(`<span class="stage">${e.stage}</span> ${badge("b-done", "ok")} <span class="msg">${e.summary || ""}</span>`);
+    case "step_complete": {
+      const prog = (e.index && e.total) ? ` (beat ${e.index}/${e.total})` : "";
+      logEvent(`<span class="stage">${e.stage}${prog}</span> ${badge("b-done", "ok")} <span class="msg">${e.summary || ""}</span>`);
       break;
+    }
     case "verify_pass":
       logEvent(`${badge("b-pass", "pass")} <span class="stage">${e.stage}</span> <span class="msg">${(e.checks || []).join(", ")}</span>`);
       break;

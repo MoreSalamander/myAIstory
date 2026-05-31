@@ -53,16 +53,25 @@ def _feedback_block(feedback: list[str] | None) -> str:
 
 
 def build_bible_prompt(seed: SeriesSeed, feedback: list[str] | None = None) -> str:
+    """The bible FRAME: characters and world, but NOT the per-episode arc.
+
+    The arc is planned one beat at a time afterwards (build_arc_beat_prompt) —
+    small models reliably write one good beat per call but collapse when asked
+    to emit all N at once. So this prompt deliberately leaves "arc" empty.
+    """
     chars = "\n".join(
         f'  - {c.name}' + (f' (role: {c.role})' if c.role else "")
         for c in seed.characters
     )
-    return f"""Create the series bible for this show.
+    n = seed.episode_count
+    return f"""Create the series bible FRAME for this show — the cast and world.
+Do NOT write the episode arc here; it is planned separately, one episode at a
+time, in a later step. Leave "arc" as an empty list.
 
 TITLE: {seed.title}
 THEME: {seed.theme}
 TONE: {seed.tone or "unspecified"}
-EPISODE COUNT: {seed.episode_count}
+EPISODE COUNT: {n}
 LOOSE PLOT DIRECTION: {seed.plot_direction or "(none given — invent a coherent arc)"}
 
 REQUIRED CHARACTERS (use these EXACT names, you may add more):
@@ -78,14 +87,63 @@ Emit JSON with this shape:
     {{"name": "EXACT name", "aliases": [], "role": "...", "status": "alive", "facts": ["..."]}}
   ],
   "world_facts": [{{"id": "wf1", "statement": "...", "established_in_episode": null}}],
-  "arc": [{{"episode": 1, "summary": "..."}}],
-  "episode_count": {seed.episode_count}
+  "arc": [],
+  "episode_count": {n}
 }}
 
 Rules:
 - Keep THEME exactly as given: "{seed.theme}".
 - Include every required character by their EXACT name.
-- "arc" must have exactly {seed.episode_count} entries, one per episode.
+- Leave "arc" empty — do NOT invent episode beats here.
+{_feedback_block(feedback)}"""
+
+
+def build_arc_beat_prompt(
+    bible: Bible,
+    episode: int,
+    prior_beats: list[tuple[int, str]],
+    total: int,
+    feedback: list[str] | None = None,
+) -> str:
+    """Plan ONE arc beat (episode K) given the frame and every prior beat.
+
+    This is the map step (advisor-style): one focused call writes the single
+    beat for episode K, grounded in the established cast/world and the arc so
+    far, so the through-line stays coherent without asking the model to hold all
+    {total} beats in one response.
+    """
+    char_lines = "\n".join(
+        f'  - {c.name}' + (f' (role: {c.role})' if c.role else "")
+        for c in bible.characters
+    ) or "  (none)"
+    so_far = (
+        "\n".join(f"  Episode {n}: {s}" for n, s in prior_beats)
+        or "  (none yet — this is the first beat)"
+    )
+    where = (
+        "the OPENING beat — establish the situation" if episode == 1
+        else "the FINALE — resolve the series' through-line" if episode == total
+        else f"a MIDDLE beat — escalate toward the finale at episode {total}"
+    )
+    return f"""Plan the arc beat for ONE episode of "{bible.title}" (theme: {bible.theme}).
+
+This is episode {episode} of {total} — {where}.
+
+CAST / WORLD (established; stay consistent, do not contradict):
+{char_lines}
+
+ARC SO FAR (the beats already planned — continue from here, do not repeat them):
+{so_far}
+
+Write a single 1-2 sentence beat that advances the story for episode {episode}.
+
+Emit JSON with EXACTLY this shape (one object, nothing else):
+{{"episode": {episode}, "summary": "..."}}
+
+Rules:
+- "episode" MUST be exactly {episode}.
+- "summary" is 1-2 sentences, concrete, and moves the arc forward from the beats above.
+- Reference the theme "{bible.theme}".
 {_feedback_block(feedback)}"""
 
 

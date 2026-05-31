@@ -16,7 +16,7 @@ from myAIstory import api, store
 from myAIstory.synth import ScriptedLLM
 
 
-def _bible_json() -> str:
+def _frame_json() -> str:
     return json.dumps({
         "series_id": "x", "title": "The Ember Cycle", "theme": "dragons",
         "tone": "epic",
@@ -24,9 +24,12 @@ def _bible_json() -> str:
             {"name": "Ember", "role": "protagonist", "status": "alive"},
             {"name": "Ash", "role": "rival", "status": "alive"},
         ],
-        "world_facts": [], "arc": [{"episode": 1, "summary": "Ember finds the hoard."}],
-        "episode_count": 1,
+        "world_facts": [], "arc": [], "episode_count": 1,
     })
+
+
+def _arc_beat_json() -> str:
+    return json.dumps({"episode": 1, "summary": "Ember finds the hoard (dragons)."})
 
 
 def _episode_json() -> str:
@@ -56,7 +59,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(store, "DATA_ROOT", tmp_path)
     monkeypatch.setattr(store, "SERIES_ROOT", tmp_path / "series")
     monkeypatch.setattr(api, "LLM_FACTORY", lambda: ScriptedLLM({
-        "bible_draft": [_bible_json()],
+        "bible_draft": [_frame_json()],
+        "arc_beat": [_arc_beat_json()],
         "episode_draft": [_episode_json()],
     }))
     return TestClient(api.app)

@@ -7,11 +7,44 @@ unchanged, the arc the right length, and no duplicate / colliding names.
 
 from __future__ import annotations
 
-from myAIstory.schemas.models import Bible, SeriesSeed
+from myAIstory.schemas.models import ArcBeat, Bible, SeriesSeed
 from myAIstory.verify.result import VerifyResult, parse
 
 
-def verify_bible(raw: object, seed: SeriesSeed) -> VerifyResult:
+def verify_arc_beat(raw: object, episode: int) -> VerifyResult:
+    """Gate one arc beat from the map step: valid shape, correct episode number.
+
+    The arc is planned one beat at a time; each beat is an untrusted proposal
+    checked here before it joins the bible. Pure-Python, like every gate.
+    """
+    result = VerifyResult(gate="arc_verify")
+
+    result.add_check("schema")
+    beat, viols = parse(ArcBeat, raw)
+    if beat is None:
+        result.violations.extend(viols)
+        return result
+
+    result.add_check("episode_match")
+    if beat.episode != episode:
+        result.fail(
+            "arc_beat_episode_mismatch",
+            f"beat is numbered {beat.episode}; expected episode {episode}",
+            field="episode",
+        )
+
+    result.add_check("summary_nonempty")
+    if not beat.summary.strip():
+        result.fail(
+            "arc_beat_empty_summary",
+            f"episode {episode} beat has an empty summary",
+            field="summary",
+        )
+
+    return result
+
+
+def verify_bible(raw: object, seed: SeriesSeed, *, check_arc: bool = True) -> VerifyResult:
     """Validate a drafted bible against the seed it must honor."""
     result = VerifyResult(gate="bible_verify")
 
@@ -53,14 +86,18 @@ def verify_bible(raw: object, seed: SeriesSeed) -> VerifyResult:
             field="episode_count",
         )
 
-    result.add_check("arc_length")
-    if len(bible.arc) != seed.episode_count:
-        result.fail(
-            "arc_length_mismatch",
-            f"arc has {len(bible.arc)} beats; expected {seed.episode_count} "
-            "(one per episode)",
-            field="arc",
-        )
+    # The arc is assembled from the per-episode map step; this final check
+    # confirms the assembly is complete. Skipped when verifying the bare FRAME
+    # (before the arc has been planned).
+    if check_arc:
+        result.add_check("arc_length")
+        if len(bible.arc) != seed.episode_count:
+            result.fail(
+                "arc_length_mismatch",
+                f"arc has {len(bible.arc)} beats; expected {seed.episode_count} "
+                "(one per episode)",
+                field="arc",
+            )
 
     # No duplicate canon names (case-insensitive).
     result.add_check("no_duplicate_names")

@@ -9,7 +9,7 @@ gates (continuity, structure, speaker). The non-blocking phase-2 cue_verify is
 not implemented yet; the schema fields it needs already exist.
 """
 
-from myAIstory.verify.bible import verify_bible
+from myAIstory.verify.bible import verify_arc_beat, verify_bible
 from myAIstory.verify.continuity import verify_continuity
 from myAIstory.verify.result import VerifyResult, Violation
 from myAIstory.verify.seed import verify_seed
@@ -19,6 +19,7 @@ from myAIstory.verify.structure import verify_structure
 __all__ = [
     "VerifyResult",
     "Violation",
+    "verify_arc_beat",
     "verify_bible",
     "verify_continuity",
     "verify_seed",

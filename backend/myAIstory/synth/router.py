@@ -29,6 +29,10 @@ class ModelSpec:
 ROLES: dict[str, ModelSpec] = {
     # World-building: lower temperature for consistent, schema-faithful canon.
     "bible_draft": ModelSpec(model="llama3.1:8b", temperature=0.6, num_predict=2048),
+    # Arc planning (the map step): one short beat per call, so a small
+    # num_predict is plenty. Same low temperature as the frame — this is canon,
+    # not prose — and it shares the bible's trust domain.
+    "arc_beat": ModelSpec(model="llama3.1:8b", temperature=0.6, num_predict=256),
     # Prose: a touch warmer for livelier episodes, still JSON-constrained.
     "episode_draft": ModelSpec(model="llama3.1:8b", temperature=0.85, num_predict=2560),
 }

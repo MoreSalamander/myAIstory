@@ -1,6 +1,13 @@
 """Pipeline A — series initialization (ARCHITECTURE.md).
 
-    seed_validate → bible_draft → bible_verify → series_persist → done
+    seed_validate → bible_draft (frame) → arc_plan (one beat per episode)
+       → bible_verify → series_persist → done
+
+The arc is planned as a *map step* (one LLM call per episode beat), not asked
+for all at once: small models reliably write one good beat per call but collapse
+when told to emit all N in a single response. Each beat is individually gated
+(arc_verify) before it joins the bible, and the fully assembled bible still
+passes the unchanged blocking bible_verify gate at the boundary.
 """
 
 from __future__ import annotations
@@ -12,9 +19,13 @@ from myAIstory.events import EventEmitter
 from myAIstory.schemas.models import Bible, SeriesSeed
 from myAIstory.synth.base import LLM
 from myAIstory.synth.drafts import stream_collect
-from myAIstory.synth.prompts import BIBLE_SYSTEM, build_bible_prompt
+from myAIstory.synth.prompts import (
+    BIBLE_SYSTEM,
+    build_arc_beat_prompt,
+    build_bible_prompt,
+)
 from myAIstory.pipeline.retry import run_with_retry
-from myAIstory.verify import verify_bible, verify_seed
+from myAIstory.verify import verify_arc_beat, verify_bible, verify_seed
 
 
 def run_init(
@@ -40,8 +51,8 @@ def run_init(
     emit.verify_pass("seed_validate", seed_result.checks)
     seed = SeriesSeed.model_validate(seed_raw)
 
-    # --- bible_draft → bible_verify (bounded retry) -------------------------
-    def produce(feedback):
+    # --- bible_draft: the FRAME (cast + world, arc left empty) --------------
+    def produce_frame(feedback):
         return stream_collect(
             llm, emit,
             stage="bible_draft",
@@ -50,20 +61,63 @@ def run_init(
             prompt=build_bible_prompt(seed, feedback),
         )
 
-    obj, _ = run_with_retry(
-        produce,
-        gates=[lambda o: verify_bible(o, seed)],
+    frame_obj, _ = run_with_retry(
+        produce_frame,
+        gates=[lambda o: verify_bible(o, seed, check_arc=False)],
         emit=emit,
         stage="bible_verify",
         max_retries=max_retries,
     )
-    if obj is None:
-        emit.done("init", "skipped", series_id=series_id, reason="bible failed verification")
+    if frame_obj is None:
+        emit.done("init", "skipped", series_id=series_id, reason="bible frame failed verification")
         return None
 
     # Pin the series_id to the deterministic slug so storage is predictable.
-    obj["series_id"] = series_id
-    bible = Bible.model_validate(obj)
+    frame_obj["series_id"] = series_id
+    frame = Bible.model_validate({**frame_obj, "arc": []})
+
+    # --- arc_plan: one verified beat per episode (the map step) -------------
+    total = seed.episode_count
+    prior: list[tuple[int, str]] = []
+    arc: list[dict] = []
+    for k in range(1, total + 1):
+        def produce_beat(feedback, _k=k):
+            return stream_collect(
+                llm, emit,
+                stage="arc_beat",
+                role="arc_beat",
+                system=BIBLE_SYSTEM,
+                prompt=build_arc_beat_prompt(frame, _k, prior, total, feedback),
+                index=_k, total=total,
+            )
+
+        beat_obj, _ = run_with_retry(
+            produce_beat,
+            gates=[lambda o, _k=k: verify_arc_beat(o, _k)],
+            emit=emit,
+            stage="arc_verify",
+            max_retries=max_retries,
+        )
+        if beat_obj is None:
+            # A gap in the arc means an incomplete bible — bounded-retry-then-
+            # skip at beat granularity: abort the whole series, logged.
+            emit.skip("arc_plan", reason=f"arc beat {k}/{total} failed verification")
+            emit.done("init", "skipped", series_id=series_id,
+                      reason=f"arc planning failed at episode {k}")
+            return None
+        beat = {"episode": k, "summary": str(beat_obj["summary"]).strip()}
+        arc.append(beat)
+        prior.append((k, beat["summary"]))
+
+    # --- bible_verify: the assembled whole, unchanged blocking gate ---------
+    assembled = {**frame_obj, "arc": arc}
+    result = verify_bible(assembled, seed)  # check_arc=True (the real boundary)
+    if not result.passed:
+        emit.verify_fail("bible_verify", [str(v) for v in result.violations], 1)
+        emit.done("init", "skipped", series_id=series_id, reason="assembled bible failed verification")
+        return None
+    emit.verify_pass("bible_verify", result.checks)
+    bible = Bible.model_validate(assembled)
 
     # --- series_persist ------------------------------------------------------
     if persist:

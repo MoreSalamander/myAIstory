@@ -44,15 +44,27 @@ Two pipelines share the same event vocabulary.
 Runs once per series, from the user's seed.
 
 ```
-seed_validate → bible_draft → bible_verify → series_persist → done
+seed_validate → bible_draft (frame) → arc_plan (one beat per episode)
+   → bible_verify → series_persist → done
 ```
 
 | Stage | Responsibility | In → Out |
 |---|---|---|
 | `seed_validate` | Pure-Python check that the seed is well-formed (names non-empty, theme in allowed set or free-text, episode count in bounds) | seed → validated seed |
-| `bible_draft` | LLM proposes the series bible (canon characters, theme rules, world facts, arc skeleton) from the seed | seed → draft bible |
-| `bible_verify` | Pure-Python: bible matches seed (all named characters present, theme honored, schema valid) | draft bible → verdict |
+| `bible_draft` | LLM proposes the series bible **frame** — canon characters, theme rules, world facts — but *not* the arc | seed → draft frame |
+| `arc_plan` | **Map step:** one LLM call per episode produces that episode's arc beat, grounded in the frame + the beats already planned; each beat is gated by `arc_verify` before it joins the arc | frame → arc beats ×N |
+| `bible_verify` | Pure-Python: the *assembled* bible (frame + full arc) matches the seed — all named characters present, theme honored, arc one-beat-per-episode, schema valid | draft bible → verdict |
 | `series_persist` | Write `bible.json` only if verified | bible → series dir |
+
+**Why the arc is a map step.** A small local model reliably writes one good beat
+per call but collapses when told to emit all N at once (it stops after a handful
+and ignores corrective feedback). So the arc is planned the same way episodes
+are — one at a time, each grounded in what came before, each individually
+verified (`arc_verify`: valid shape, correct episode number, non-empty summary).
+A beat that exhausts its retry budget skips the whole series (a gap in the arc is
+an incomplete bible). The unchanged `bible_verify` still guards the boundary: the
+fully assembled bible must pass before anything persists. This mirrors the
+my-AI-stro advisor, which builds a multi-section study guide one section per call.
 
 ### Pipeline B — Episode generation (`episode`)
 

@@ -42,8 +42,10 @@ The user's input. Validated by `seed_validate` before anything else runs.
 
 ## 2. Bible (the source of truth)
 
-Produced by `bible_draft`, gated by `bible_verify`, persisted as
-`bible.json`. Updated only through the verified `bible_update` stage.
+Produced in two stages — `bible_draft` writes the frame (cast + world), then
+`arc_plan` fills the `arc` one beat per episode (the map step) — gated as a
+whole by `bible_verify`, persisted as `bible.json`. Updated only through the
+verified `bible_update` stage.
 
 | Field | Type | Rule |
 |---|---|---|
@@ -53,7 +55,7 @@ Produced by `bible_draft`, gated by `bible_verify`, persisted as
 | `tone` | str | from seed or model-proposed, then human-visible |
 | `characters` | list[CanonCharacter] | superset of seed characters; model may add, but seed characters must all be present and unchanged in name |
 | `world_facts` | list[WorldFact] | established truths the story must not contradict |
-| `arc` | list[ArcBeat] | high-level skeleton, one entry per planned episode |
+| `arc` | list[ArcBeat] | one entry per planned episode; planned one beat at a time by `arc_plan`, each gated by `arc_verify` |
 | `episode_count` | int | from seed |
 | `created_at` / `updated_at` | iso8601 | |
 
@@ -72,12 +74,17 @@ Produced by `bible_draft`, gated by `bible_verify`, persisted as
 
 **ArcBeat**: `{ episode: int, summary: str }`
 
-**`bible_verify` acceptance criteria** (pure-Python):
+**`arc_verify` acceptance criteria** (pure-Python, per beat from the map step):
+- schema valid.
+- `episode` equals the episode being planned.
+- `summary` is non-empty.
+
+**`bible_verify` acceptance criteria** (pure-Python, on the assembled bible):
 - schema valid.
 - **every seed character present by exact name** (model may add but not
   drop or rename seed characters).
 - `theme` equals seed theme.
-- `arc` length == `episode_count`.
+- `arc` length == `episode_count` (skipped in frame mode, before the arc is planned).
 - no duplicate character names / alias collisions.
 
 ---
