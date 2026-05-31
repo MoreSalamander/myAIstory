@@ -1,0 +1,171 @@
+# my-AI-story — Architecture
+
+> The pipeline shape, the named stages, and the event vocabulary. This
+> document defines *how the system is structured*; `SPEC.md` defines *what
+> each stage must produce and verify*; `CONSTITUTION.md` defines *why*.
+
+my-AI-story is a named-stage pipeline in the Build It Publisher → my-AI-stro
+lineage. Each stage has one responsibility, explicit input/output, and
+emits NDJSON events so a run is observable end-to-end from the web UI.
+
+---
+
+## System overview
+
+```
+                          ┌──────────────────────────────────────┐
+   USER (web UI)          │         my-AI-story BACKEND            │
+   seed: names, theme,    │   FastAPI  ·  NDJSON event stream      │
+   plot direction,  ─────▶│   Ollama (synthesis)  ·  Python (verify)│
+   episode count          │   local TTS (pluggable)                │
+                          └──────────────────────────────────────┘
+                                          │
+                                          ▼
+                         backend/data/series/<series_id>/
+                           bible.json          (source of truth)
+                           episodes/NN.json    (verified episode)
+                           audio/NN.wav         (stitched narration)
+                           events.ndjson        (full run log)
+```
+
+- **Stack**: Python backend (FastAPI), Ollama for LLM synthesis, a
+  pluggable local TTS engine, a web UI consuming an NDJSON event stream.
+- **Storage**: one directory per series. The bible is the source of truth;
+  episodes and audio are verified, derived artifacts.
+
+---
+
+## The pipeline stages
+
+Two pipelines share the same event vocabulary.
+
+### Pipeline A — Series initialization (`init`)
+
+Runs once per series, from the user's seed.
+
+```
+seed_validate → bible_draft → bible_verify → series_persist → done
+```
+
+| Stage | Responsibility | In → Out |
+|---|---|---|
+| `seed_validate` | Pure-Python check that the seed is well-formed (names non-empty, theme in allowed set or free-text, episode count in bounds) | seed → validated seed |
+| `bible_draft` | LLM proposes the series bible (canon characters, theme rules, world facts, arc skeleton) from the seed | seed → draft bible |
+| `bible_verify` | Pure-Python: bible matches seed (all named characters present, theme honored, schema valid) | draft bible → verdict |
+| `series_persist` | Write `bible.json` only if verified | bible → series dir |
+
+### Pipeline B — Episode generation (`episode`)
+
+Runs once per episode, in order. Episode N may read prior episode summaries.
+
+```
+context_load → episode_draft → continuity_verify → structure_verify
+   → speaker_verify → [cue_verify]ᵖ² → voice_assign → tts_synth
+   → stitch/mix → episode_persist → bible_update → done
+```
+
+ᵖ² = phase-2 stage. In v1 the flow runs without `cue_verify`, and `stitch`
+is plain sequential concatenation.
+
+| Stage | Responsibility | In → Out |
+|---|---|---|
+| `context_load` | Load bible + prior episode summaries → build the constraint context for this episode | series dir → context |
+| `episode_draft` | LLM drafts episode prose + speaker-tagged dialogue under context + plot direction | context → draft episode |
+| `continuity_verify` | **Gate.** Pure-Python: names/theme/established facts match bible; no contradictions | draft → verdict |
+| `structure_verify` | **Gate.** Pure-Python: schema satisfied (beats present, length in bounds, dialogue well-formed) | draft → verdict |
+| `speaker_verify` | **Gate.** Pure-Python: every spoken line maps to a known speaker or narrator | draft → verdict |
+| `cue_verify` ᵖ² | **Non-blocking gate.** Pure-Python: every `sfx`/`ambience`/`music` cue resolves in the sound library; unresolved cues are dropped, not failed | draft → cleaned cues |
+| `voice_assign` | Map each speaker → a TTS voice per the voice policy | episode → voiced script |
+| `tts_synth` | Local TTS renders each speech line in its assigned voice | voiced script → line clips |
+| `stitch` (→ `mix` ᵖ²) | v1: concatenate line clips in order. Phase 2: mix speech + cues on a timeline — place one-shot sfx, loop/fade `under` beds, duck beds beneath speech | clips (+cues) → `NN.wav` |
+| `episode_persist` | Write `episodes/NN.json` + `audio/NN.wav` (only verified episodes reach here) | episode → series dir |
+| `bible_update` | Verified bible-update stage: append this episode's new canon facts (deaths, reveals, new characters) back to the bible | episode → updated bible |
+
+**Gate semantics**: `continuity_verify`, `structure_verify`, and
+`speaker_verify` are blocking. A failure routes back to `episode_draft`
+with the specific violation, for a **bounded** number of retries (default
+2). After the bound, the episode is **skipped and logged** — never
+force-persisted. See `CONSTITUTION.md`.
+
+---
+
+## Why `bible_update` is its own verified stage
+
+The episode draft has **no write authority over canon.** New facts (a
+character dies, a secret is revealed) only enter the bible through
+`bible_update`, which re-validates them against the schema before
+appending. This is the trust-isolation rule from `CONSTITUTION.md`:
+prose output never silently edits the source of truth.
+
+---
+
+## Event vocabulary (NDJSON)
+
+Every stage emits newline-delimited JSON events on a shared vocabulary,
+inherited from my-AI-stro. The web UI renders the run live from this
+stream.
+
+| Event | Emitted when | Payload |
+|---|---|---|
+| `run_start` | A pipeline run begins | `{pipeline, series_id, ts}` |
+| `step_start` | A stage begins | `{stage, ts}` |
+| `token` | LLM streaming token (draft stages) | `{stage, text}` |
+| `step_complete` | A stage finishes OK | `{stage, summary, ts}` |
+| `verify_pass` | A gate passes | `{stage, checks}` |
+| `verify_fail` | A gate fails (triggers bounded retry) | `{stage, violations, attempt}` |
+| `retry` | A draft is re-attempted after a gate failure | `{stage, attempt, reason}` |
+| `skip` | Retry bound exhausted; episode skipped | `{stage, reason}` |
+| `tts_line` | One speech line rendered to audio | `{speaker, voice, idx}` |
+| `cue_place` ᵖ² | One sfx/ambience/music cue placed on the timeline | `{kind, cue, idx, under}` |
+| `cue_drop` ᵖ² | A cue tag didn't resolve in the library; dropped | `{kind, cue, idx}` |
+| `done` | Pipeline run finished | `{pipeline, result, ts}` |
+| `error` | Unrecoverable error | `{stage, message}` |
+
+`verify_fail`, `retry`, and `skip` are my-AI-story-specific additions; the rest
+match the studio's existing pipelines so the vocabulary stays portable.
+
+Every event is also appended to `events.ndjson` in the series dir, so a run
+is auditable after the fact — not just live.
+
+---
+
+## Module layout
+
+```
+backend/myAIstory/
+  schemas/        Pydantic models: SeriesSeed, Bible, Episode, VoiceMap
+  pipeline/       One module per stage; an orchestrator that emits events
+  verify/         Pure-Python verifiers (continuity, structure, speaker)
+                  — NO LLM imports allowed in this package
+  synth/          Ollama client wrapper (bible_draft, episode_draft)
+  tts/            Pluggable TTS interface + one local backend
+  sound/          (phase 2) SoundLibrary loader + cue resolver
+  mix/            (phase 2) timeline mixer: ducking, fades, placement
+  events.py       NDJSON event emitter
+  store.py        Series directory read/write
+  api.py          FastAPI app: start runs, stream events
+frontend/         Web UI consuming the NDJSON stream
+```
+
+The `sound/` resolver and `mix/` mixer are phase-2 additions that bolt onto
+the existing pipeline; v1 ships without them. Like `verify/`, `sound/`'s
+resolver imports no LLM — cue resolution is a pure lookup against the
+manifest.
+
+**Hard rule**: the `verify/` package imports no LLM client and no network
+code. A verifier that calls a model is a contradiction in terms.
+
+---
+
+## Observability
+
+A run is observable three ways, all from the same event stream:
+
+1. **Live** — the web UI renders `step_start`/`token`/`verify_*`/`done`
+   as the run happens.
+2. **Replayable** — `events.ndjson` is the full ordered log; re-render any
+   past run from it.
+3. **Auditable** — every gate's pass/fail and every skip is in the log, so
+   "why didn't episode 5 generate?" always has a recorded answer.
+
+— **MoreSalamander StudioLabs** · *Scientia Ludusque*

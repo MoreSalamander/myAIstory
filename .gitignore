@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Generated artifacts
+backend/data/series/
+backend/data/*.json
+!backend/data/.gitkeep
+*.wav
+*.mp3
+voices/*.wav
+!voices/.gitkeep
+
+# Local model / TTS caches
+.cache/
+models/
+
+# Env
+.env
+.env.local
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
