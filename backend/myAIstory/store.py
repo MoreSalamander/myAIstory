@@ -80,6 +80,19 @@ def read_episode(series_id: str, number: int) -> Episode:
     )
 
 
+def audio_path(series_id: str, number: int) -> Path:
+    return series_dir(series_id) / "audio" / f"{number:02d}.wav"
+
+
+def write_audio(series_id: str, number: int, wav_bytes: bytes) -> Path:
+    """Persist a stitched episode track. Only verified episodes reach here."""
+    ensure_series(series_id)
+    path = audio_path(series_id, number)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(wav_bytes)
+    return path
+
+
 def prior_summaries(series_id: str, before_number: int) -> list[tuple[int, str]]:
     """Ordered (number, summary) for every persisted episode before `before_number`.
 

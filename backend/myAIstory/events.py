@@ -79,6 +79,9 @@ class EventEmitter:
     def skip(self, stage: str, reason: str) -> dict:
         return self.emit("skip", stage=stage, reason=reason)
 
+    def tts_line(self, speaker: str, voice: str, idx: int) -> dict:
+        return self.emit("tts_line", speaker=speaker, voice=voice, idx=idx)
+
     def done(self, pipeline: str, result: str, **extra) -> dict:
         return self.emit("done", pipeline=pipeline, result=result, **extra)
 

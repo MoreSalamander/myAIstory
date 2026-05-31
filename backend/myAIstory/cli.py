@@ -44,6 +44,9 @@ def main(argv: Optional[list[str]] = None) -> int:
                         help="override target minutes per episode")
     parser.add_argument("--no-persist", action="store_true",
                         help="do not write any files (events still print)")
+    parser.add_argument("--voices", metavar="DIR",
+                        help="render audio with Piper voices from this directory "
+                             "(*.onnx models); omit for text-only")
     args = parser.parse_args(argv)
 
     if args.seed:
@@ -58,10 +61,19 @@ def main(argv: Optional[list[str]] = None) -> int:
     if persist:
         emit.add_sink(store.event_sink(series_id))
 
+    tts = None
+    if args.voices:
+        from myAIstory.tts import PiperError, PiperTTS
+        try:
+            tts = PiperTTS(args.voices)
+        except PiperError as exc:
+            print(f"voices disabled: {exc}", file=sys.stderr)
+
     llm = OllamaClient()
     bible, episodes = run_series(
         seed, llm, emit,
         target_minutes=args.minutes,
+        tts=tts,
         persist=persist,
         max_episodes=args.episodes,
     )
