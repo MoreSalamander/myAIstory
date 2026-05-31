@@ -30,6 +30,7 @@ from myAIstory.pipeline.series import run_series
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 VOICES_DIR = store.DATA_ROOT / "voices"
+SOUND_LIBRARY_DIR = store.DATA_ROOT / "sound_library"
 
 # Overridable seams (tests swap these for a ScriptedLLM and a temp data dir).
 LLM_FACTORY: Callable[[], LLM] = OllamaClient
@@ -46,6 +47,17 @@ def build_tts(use_voices: bool):
         return None
 
 
+def build_library(use_sound: bool):
+    """Load the curated SoundLibrary if cues are requested and present."""
+    if not use_sound or not (SOUND_LIBRARY_DIR / "library.json").exists():
+        return None
+    from myAIstory.sound import SoundLibrary
+    try:
+        return SoundLibrary.load(SOUND_LIBRARY_DIR)
+    except Exception:
+        return None
+
+
 app = FastAPI(title="my-AI-story", description="A MoreSalamander StudioLabs production.")
 
 
@@ -56,6 +68,7 @@ class GenerateRequest(BaseModel):
     minutes: Optional[int] = None
     episodes: Optional[int] = Field(default=None, ge=1)
     voices: bool = False
+    sound: bool = False
 
 
 # --- run + stream ------------------------------------------------------------
@@ -74,6 +87,7 @@ def _ndjson_run(req: GenerateRequest) -> Iterator[str]:
                 seed_raw, LLM_FACTORY(), emit,
                 target_minutes=req.minutes,
                 tts=build_tts(req.voices),
+                library=build_library(req.sound),
                 max_episodes=req.episodes,
             )
         except Exception as exc:  # surface as a final event, never a dropped stream

@@ -1,0 +1,132 @@
+{
+  "assets": [
+    {
+      "tag": "door_close",
+      "kind": "sfx",
+      "aliases": [
+        "door",
+        "door_slam"
+      ],
+      "file": "sfx/door_close.wav",
+      "gain_db": -3.0,
+      "loop": false
+    },
+    {
+      "tag": "footsteps",
+      "kind": "sfx",
+      "aliases": [
+        "footsteps_gravel",
+        "walking",
+        "steps"
+      ],
+      "file": "sfx/footsteps.wav",
+      "gain_db": -6.0,
+      "loop": false
+    },
+    {
+      "tag": "thunder",
+      "kind": "sfx",
+      "aliases": [
+        "thunderclap",
+        "storm"
+      ],
+      "file": "sfx/thunder.wav",
+      "gain_db": -2.0,
+      "loop": false
+    },
+    {
+      "tag": "sword_clash",
+      "kind": "sfx",
+      "aliases": [
+        "sword",
+        "clash",
+        "blade"
+      ],
+      "file": "sfx/sword_clash.wav",
+      "gain_db": -4.0,
+      "loop": false
+    },
+    {
+      "tag": "wing_flap",
+      "kind": "sfx",
+      "aliases": [
+        "wings",
+        "wingbeat",
+        "flapping"
+      ],
+      "file": "sfx/wing_flap.wav",
+      "gain_db": -5.0,
+      "loop": false
+    },
+    {
+      "tag": "rain",
+      "kind": "ambience",
+      "aliases": [
+        "rainfall",
+        "raining"
+      ],
+      "file": "ambience/rain.wav",
+      "gain_db": -10.0,
+      "loop": true
+    },
+    {
+      "tag": "wind",
+      "kind": "ambience",
+      "aliases": [
+        "wind_gust",
+        "breeze",
+        "rustling"
+      ],
+      "file": "ambience/wind.wav",
+      "gain_db": -11.0,
+      "loop": true
+    },
+    {
+      "tag": "fire_crackle",
+      "kind": "ambience",
+      "aliases": [
+        "fire",
+        "campfire",
+        "hearth"
+      ],
+      "file": "ambience/fire_crackle.wav",
+      "gain_db": -10.0,
+      "loop": true
+    },
+    {
+      "tag": "tension",
+      "kind": "music",
+      "aliases": [
+        "suspense",
+        "dread",
+        "ominous"
+      ],
+      "file": "music/tension.wav",
+      "gain_db": -12.0,
+      "loop": true
+    },
+    {
+      "tag": "calm",
+      "kind": "music",
+      "aliases": [
+        "peaceful",
+        "gentle"
+      ],
+      "file": "music/calm.wav",
+      "gain_db": -13.0,
+      "loop": true
+    },
+    {
+      "tag": "triumph",
+      "kind": "music",
+      "aliases": [
+        "victory",
+        "heroic",
+        "fanfare"
+      ],
+      "file": "music/triumph.wav",
+      "gain_db": -12.0,
+      "loop": true
+    }
+  ]
+}

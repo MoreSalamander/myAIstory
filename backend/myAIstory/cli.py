@@ -47,6 +47,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--voices", metavar="DIR",
                         help="render audio with Piper voices from this directory "
                              "(*.onnx models); omit for text-only")
+    parser.add_argument("--sound", metavar="DIR", nargs="?", const=str(store.DATA_ROOT / "sound_library"),
+                        help="mix sound cues from this library directory "
+                             "(default: data/sound_library); requires --voices")
     args = parser.parse_args(argv)
 
     if args.seed:
@@ -69,11 +72,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         except PiperError as exc:
             print(f"voices disabled: {exc}", file=sys.stderr)
 
+    library = None
+    if args.sound:
+        from myAIstory.sound import SoundLibrary
+        try:
+            library = SoundLibrary.load(args.sound)
+        except Exception as exc:
+            print(f"sound disabled: {exc}", file=sys.stderr)
+
     llm = OllamaClient()
     bible, episodes = run_series(
         seed, llm, emit,
         target_minutes=args.minutes,
         tts=tts,
+        library=library,
         persist=persist,
         max_episodes=args.episodes,
     )

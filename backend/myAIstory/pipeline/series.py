@@ -15,6 +15,7 @@ from myAIstory.schemas.models import Bible, DEFAULT_MINUTES, Episode
 from myAIstory.pipeline.episode import run_episode
 from myAIstory.pipeline.init import run_init
 from myAIstory.synth.base import LLM
+from myAIstory.sound.library import SoundLibrary
 from myAIstory.tts.base import TTSEngine
 
 
@@ -25,6 +26,7 @@ def run_series(
     *,
     target_minutes: Optional[int] = None,
     tts: Optional[TTSEngine] = None,
+    library: Optional[SoundLibrary] = None,
     persist: bool = True,
     max_retries: int = 2,
     max_episodes: Optional[int] = None,
@@ -47,7 +49,7 @@ def run_series(
     for number in range(1, count + 1):
         episode = run_episode(
             bible.series_id, number, llm, emit,
-            bible=bible, target_minutes=target, tts=tts,
+            bible=bible, target_minutes=target, tts=tts, library=library,
             persist=persist, max_retries=max_retries,
         )
         if episode is not None:

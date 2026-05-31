@@ -98,6 +98,7 @@ Ash:rival</textarea>
     <label>Generate only (cap episodes, optional)</label>
     <input id="cap" type="number" min="1" placeholder="all" />
     <div class="chk"><input id="voices" type="checkbox" /><label style="margin:0">Render audio (Piper voices)</label></div>
+    <div class="chk"><input id="sound" type="checkbox" /><label style="margin:0">Mix sound cues (SFX / ambience / music)</label></div>
     <button id="go">Generate</button>
     <div class="hint">Streams the live pipeline: drafting → verifier gates → (optional) TTS.
       Nothing is persisted or voiced until the pure-Python gates pass it.</div>
@@ -186,6 +187,12 @@ function handleEvent(e) {
     case "tts_line":
       logEvent(`<span class="stage">tts_line</span> <span class="msg">#${e.idx} ${e.speaker} → ${e.voice}</span>`, "tts");
       break;
+    case "cue_place":
+      logEvent(`${badge("b-pass", "cue")} <span class="stage">cue_place</span> <span class="msg">#${e.idx} ${e.kind}:${e.cue}${e.under ? " (under)" : ""}</span>`, "tts");
+      break;
+    case "cue_drop":
+      logEvent(`${badge("b-warn", "drop")} <span class="stage">cue_drop</span> <span class="msg">#${e.idx} ${e.kind}:${e.cue}</span>`, "tts");
+      break;
     case "done":
       logEvent(`${badge(e.result === "ok" ? "b-pass" : "b-fail", e.result)} <span class="stage">${e.pipeline} done</span>`);
       if (e.pipeline === "episode" && e.result === "ok") loadEpisode(currentSeriesId, e.number);
@@ -207,6 +214,7 @@ async function generate() {
     minutes: parseInt($("minutes").value, 10),
     episodes: $("cap").value ? parseInt($("cap").value, 10) : null,
     voices: $("voices").checked,
+    sound: $("sound").checked,
   };
   try {
     const res = await fetch("/api/generate", {

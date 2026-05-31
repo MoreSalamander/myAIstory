@@ -22,6 +22,7 @@ from myAIstory.pipeline.voice import assign_voices
 from myAIstory.synth.base import LLM
 from myAIstory.synth.drafts import stream_collect
 from myAIstory.synth.prompts import EPISODE_SYSTEM, build_episode_prompt
+from myAIstory.sound.library import SoundLibrary
 from myAIstory.tts.base import TTSEngine
 from myAIstory.verify import verify_continuity, verify_speaker, verify_structure
 
@@ -36,6 +37,7 @@ def run_episode(
     target_minutes: int = DEFAULT_MINUTES,
     voices: Optional[list[str]] = None,
     tts: Optional[TTSEngine] = None,
+    library: Optional[SoundLibrary] = None,
     persist: bool = True,
     max_retries: int = 2,
 ) -> Optional[Episode]:
@@ -43,7 +45,9 @@ def run_episode(
 
     When `tts` is provided, the verified episode is rendered to audio and (if
     persisting) written to audio/NN.wav. With no engine the pipeline stops at
-    the verified script — exactly the phase-2 behavior.
+    the verified script — exactly the phase-2 behavior. When a `library` is also
+    given, the model may emit sound cues; resolved cues are mixed under the
+    speech (cue_verify is non-blocking — unresolved cues are dropped).
     """
     if bible is None:
         bible = store.read_bible(series_id)
@@ -65,13 +69,16 @@ def run_episode(
     emit.step_complete("context_load", summary=f"{len(priors)} prior episode(s)")
 
     # --- episode_draft → 3 gates (bounded retry) -----------------------------
+    cue_tags = library.tags if library is not None else None
+
     def produce(feedback):
         return stream_collect(
             llm, emit,
             stage="episode_draft",
             role="episode_draft",
             system=EPISODE_SYSTEM,
-            prompt=build_episode_prompt(bible, number, priors, target_minutes, feedback),
+            prompt=build_episode_prompt(bible, number, priors, target_minutes,
+                                        feedback, cue_tags=cue_tags),
         )
 
     gates = [
@@ -89,8 +96,9 @@ def run_episode(
     obj["number"] = number  # pin to the requested index
     episode = Episode.model_validate(obj)
 
-    # --- tts_synth → stitch (phase 3, only with an engine) -------------------
-    clip = render_episode(episode, voice_map, tts, emit) if tts is not None else None
+    # --- tts_synth → cue_verify → stitch/mix (only with an engine) -----------
+    clip = (render_episode(episode, voice_map, tts, emit, library=library)
+            if tts is not None else None)
 
     # --- episode_persist -----------------------------------------------------
     if persist:

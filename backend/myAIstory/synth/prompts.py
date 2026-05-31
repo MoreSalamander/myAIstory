@@ -89,12 +89,29 @@ Rules:
 {_feedback_block(feedback)}"""
 
 
+def _cue_block(cue_tags: list[str] | None) -> str:
+    if not cue_tags:
+        return ""
+    tags = ", ".join(cue_tags)
+    return f"""
+
+OPTIONAL SOUND CUES (enhancement only — never required):
+You MAY interleave sound cues between speech lines for atmosphere. A cue is a
+line of the form {{"kind": "sfx"|"ambience"|"music", "cue": "TAG", "under": true|false}}.
+- Use ONLY these tags (anything else is silently dropped): {tags}
+- "sfx" are one-shot moments (a door, a clash); "ambience"/"music" are beds —
+  set "under": true so they play quietly beneath the following narration.
+- Cues carry no "speaker"/"text". They do NOT count toward the word total.
+- When in doubt, omit them. Sound must never distort the story."""
+
+
 def build_episode_prompt(
     bible: Bible,
     number: int,
     prior_summaries: list[tuple[int, str]],
     target_minutes: int,
     feedback: list[str] | None = None,
+    cue_tags: list[str] | None = None,
 ) -> str:
     char_lines = "\n".join(
         f'  - {c.name} ({c.status})' + (f', aka {", ".join(c.aliases)}' if c.aliases else "")
@@ -146,5 +163,5 @@ Rules:
 - "beats" entries must come from: {", ".join(BEAT_KINDS)}; include at least {", ".join(REQUIRED_BEATS)}.
 - Every dialogue "speaker" must be an EXACT canon name above; narration uses "narrator".
 - LENGTH: {low}-{high} total spoken words (aim for ~{high}). This is enforced — do not under-write.
-- Reference the theme "{bible.theme}" so the episode stays on-theme.
+- Reference the theme "{bible.theme}" so the episode stays on-theme.{_cue_block(cue_tags)}
 {_feedback_block(feedback)}"""

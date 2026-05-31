@@ -82,6 +82,12 @@ class EventEmitter:
     def tts_line(self, speaker: str, voice: str, idx: int) -> dict:
         return self.emit("tts_line", speaker=speaker, voice=voice, idx=idx)
 
+    def cue_place(self, kind: str, cue: str, idx: int, under: bool) -> dict:
+        return self.emit("cue_place", kind=kind, cue=cue, idx=idx, under=under)
+
+    def cue_drop(self, kind: str, cue: str, idx: int) -> dict:
+        return self.emit("cue_drop", kind=kind, cue=cue, idx=idx)
+
     def done(self, pipeline: str, result: str, **extra) -> dict:
         return self.emit("done", pipeline=pipeline, result=result, **extra)
 
