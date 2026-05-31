@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 from myAIstory.tts.base import Clip, Voice
@@ -23,6 +24,13 @@ from myAIstory.tts.base import Clip, Voice
 
 class PiperError(RuntimeError):
     pass
+
+
+def _default_binary() -> str:
+    """Prefer the `piper` console script next to the running interpreter
+    (e.g. the venv's bin), falling back to whatever is on PATH."""
+    candidate = Path(sys.executable).with_name("piper")
+    return str(candidate) if candidate.exists() else "piper"
 
 
 class PiperTTS:
@@ -38,11 +46,11 @@ class PiperTTS:
         self,
         voices_dir: str | Path,
         *,
-        binary: str = "piper",
+        binary: str | None = None,
         length_scale: float | None = None,
     ) -> None:
         self.voices_dir = Path(voices_dir)
-        self.binary = binary
+        self.binary = binary or _default_binary()
         self.length_scale = length_scale
         self._models: dict[str, Path] = {}
         self._rates: dict[str, int] = {}

@@ -1,5 +1,14 @@
-# my-AI-story backend — phase 1 (schemas + verifiers).
-# Deliberately tiny: the verify/ package depends on nothing but the schema
-# layer. Pydantic provides the typed contracts; pytest runs the gates' tests.
+# my-AI-story backend dependencies.
+#
+# Core (phases 1-2): the verify/ package depends on nothing but the schema
+# layer; pydantic provides the typed contracts and pytest runs the gates.
+# The Ollama client uses only the stdlib (urllib), so no HTTP library here.
 pydantic>=2.6
 pytest>=8.0
+
+# Phase 3 — local TTS (optional at runtime; the pipeline is text-only without
+# an engine). piper-tts is the v1 backend; voice models are fetched separately
+# via `python -m piper.download_voices <name> --data-dir data/voices`.
+# certifi gives that downloader a CA bundle on framework Python builds.
+piper-tts>=1.4
+certifi

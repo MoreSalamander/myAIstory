@@ -54,9 +54,14 @@ def run_episode(
     emit.step_start("context_load")
     priors = store.prior_summaries(series_id, number) if persist else []
     # Cast against the active TTS backend's real voices when one is present,
-    # else the placeholder pool (voice_assign is pure either way).
+    # else the placeholder pool (voice_assign is pure either way). A real
+    # backend has no voice literally named "narrator", so pin the narrator to a
+    # concrete registry id rather than the placeholder default.
     pool = voices or ([v.id for v in tts.voices()] if tts is not None else None)
-    voice_map = assign_voices(bible, pool)  # voice_assign (deterministic)
+    narrator_voice = None
+    if pool:
+        narrator_voice = "narrator" if "narrator" in pool else pool[0]
+    voice_map = assign_voices(bible, pool, narrator_voice)  # voice_assign
     emit.step_complete("context_load", summary=f"{len(priors)} prior episode(s)")
 
     # --- episode_draft → 3 gates (bounded retry) -----------------------------

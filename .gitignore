@@ -18,6 +18,9 @@ voices/*.wav
 .cache/
 models/
 
+# Downloaded TTS voice models (large binaries; fetched via piper.download_voices)
+backend/data/voices/
+
 # Env
 .env
 .env.local
