@@ -16,6 +16,7 @@ from typing import Optional
 
 from myAIstory import store
 from myAIstory.events import EventEmitter
+from myAIstory.plots import PlotKit
 from myAIstory.schemas.models import Bible, SeriesSeed
 from myAIstory.synth.base import LLM
 from myAIstory.synth.drafts import stream_collect
@@ -36,6 +37,7 @@ def run_init(
     persist: bool = True,
     max_retries: int = 2,
     available_voices: Optional[set[str]] = None,
+    kit: Optional[PlotKit] = None,
 ) -> Optional[Bible]:
     """Initialize a series from a seed; returns the persisted Bible or None."""
     series_id = store.slugify(str(seed_raw.get("title", "series")))
@@ -81,14 +83,23 @@ def run_init(
     prior: list[tuple[int, str]] = []
     arc: list[dict] = []
     for k in range(1, total + 1):
-        def produce_beat(feedback, _k=k):
+        position = "opening" if k == 1 else "finale" if k == total else "middle"
+        plot = kit.select(position, series_id=series_id, episode=k) if kit else None
+        plot_shape = plot.shape if plot else None
+
+        def produce_beat(feedback, _k=k, _shape=plot_shape, _pid=plot.id if plot else None):
+            extra = {"index": _k, "total": total}
+            if _pid:
+                extra["plot"] = _pid
             return stream_collect(
                 llm, emit,
                 stage="arc_beat",
                 role="arc_beat",
                 system=BIBLE_SYSTEM,
-                prompt=build_arc_beat_prompt(frame, _k, prior, total, feedback),
-                index=_k, total=total,
+                prompt=build_arc_beat_prompt(
+                    frame, _k, prior, total, feedback, plot_shape=_shape
+                ),
+                **extra,
             )
 
         beat_obj, _ = run_with_retry(

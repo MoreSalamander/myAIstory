@@ -101,19 +101,31 @@ Rules:
 {_feedback_block(feedback)}"""
 
 
+def _plot_block(plot_shape: str | None) -> str:
+    if not plot_shape:
+        return ""
+    return (
+        "\nSUGGESTED BEAT SHAPE (a classic structure to ADAPT — make it specific "
+        "to THIS cast and theme; do not name or quote it literally, just let it "
+        f"guide what happens):\n  {plot_shape}\n"
+    )
+
+
 def build_arc_beat_prompt(
     bible: Bible,
     episode: int,
     prior_beats: list[tuple[int, str]],
     total: int,
     feedback: list[str] | None = None,
+    plot_shape: str | None = None,
 ) -> str:
     """Plan ONE arc beat (episode K) given the frame and every prior beat.
 
     This is the map step (advisor-style): one focused call writes the single
     beat for episode K, grounded in the established cast/world and the arc so
     far, so the through-line stays coherent without asking the model to hold all
-    {total} beats in one response.
+    {total} beats in one response. ``plot_shape`` is an optional theme-agnostic
+    scaffold drawn from the curated plot kit for the model to specialize.
     """
     char_lines = "\n".join(
         f'  - {c.name}' + (f' (role: {c.role})' if c.role else "")
@@ -137,7 +149,7 @@ CAST / WORLD (established; stay consistent, do not contradict):
 
 ARC SO FAR (the beats already planned — continue from here, do not repeat them):
 {so_far}
-
+{_plot_block(plot_shape)}
 Write a single 1-2 sentence beat that advances the story for episode {episode}.
 
 Emit JSON with EXACTLY this shape (one object, nothing else):

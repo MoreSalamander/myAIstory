@@ -31,6 +31,7 @@ from myAIstory.pipeline.series import run_series
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 VOICES_DIR = store.DATA_ROOT / "voices"
 SOUND_LIBRARY_DIR = store.DATA_ROOT / "sound_library"
+PLOT_KIT_DIR = store.DATA_ROOT / "plot_kit"
 
 # Overridable seams (tests swap these for a ScriptedLLM and a temp data dir).
 LLM_FACTORY: Callable[[], LLM] = OllamaClient
@@ -54,6 +55,17 @@ def build_library(use_sound: bool):
     from myAIstory.sound import SoundLibrary
     try:
         return SoundLibrary.load(SOUND_LIBRARY_DIR)
+    except Exception:
+        return None
+
+
+def build_kit():
+    """Load the curated plot grab bag if present (auto-sampled by the arc planner)."""
+    if not (PLOT_KIT_DIR / "kit.json").exists():
+        return None
+    from myAIstory.plots import PlotKit
+    try:
+        return PlotKit.load(PLOT_KIT_DIR)
     except Exception:
         return None
 
@@ -88,6 +100,7 @@ def _ndjson_run(req: GenerateRequest) -> Iterator[str]:
                 target_minutes=req.minutes,
                 tts=build_tts(req.voices),
                 library=build_library(req.sound),
+                kit=build_kit(),
                 max_episodes=req.episodes,
             )
         except Exception as exc:  # surface as a final event, never a dropped stream

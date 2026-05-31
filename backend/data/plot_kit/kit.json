@@ -1,0 +1,110 @@
+{
+  "_comment": "Human-owned, theme-agnostic plot grab bag. Each entry is a structural beat SHAPE the arc planner adapts to the series' cast and theme — it is a curated catalog (like the sound library and voice registry), not model output. 'fits' lists the arc positions where the shape works: opening (episode 1), finale (last episode), middle (everything between). The model only does thematic specialization; the structure stays human-owned, which also keeps an exotic theme from collapsing the arc.",
+  "plots": [
+    {
+      "id": "ordinary_world_disrupted",
+      "name": "Ordinary world disrupted",
+      "fits": ["opening"],
+      "shape": "Establish the protagonist's normal world and what they want, then introduce the disruption or call that sets the whole series in motion.",
+      "tags": ["setup"]
+    },
+    {
+      "id": "thrown_together",
+      "name": "Thrown together",
+      "fits": ["opening"],
+      "shape": "Force two or more of the cast into an uneasy alliance by a shared danger or goal, sketching the friction that will drive them.",
+      "tags": ["setup", "relationship"]
+    },
+    {
+      "id": "a_stranger_arrives",
+      "name": "A stranger arrives",
+      "fits": ["opening"],
+      "shape": "A newcomer, message, or omen arrives bearing the inciting mystery; the cast must decide whether to trust it.",
+      "tags": ["setup", "mystery"]
+    },
+    {
+      "id": "rising_threat",
+      "name": "Rising threat",
+      "fits": ["middle"],
+      "shape": "Escalate the central danger a clear notch — raise the stakes or shrink the time the cast has, and show them adapting.",
+      "tags": ["escalation"]
+    },
+    {
+      "id": "betrayal_within",
+      "name": "Betrayal within",
+      "fits": ["middle"],
+      "shape": "An ally's loyalty is broken or thrown into doubt, fracturing the group's trust at the worst moment.",
+      "tags": ["relationship", "reversal"]
+    },
+    {
+      "id": "false_victory",
+      "name": "False victory",
+      "fits": ["middle"],
+      "shape": "The cast wins something they wanted, only for the victory to unravel and leave them worse off than before.",
+      "tags": ["reversal"]
+    },
+    {
+      "id": "a_secret_revealed",
+      "name": "A secret revealed",
+      "fits": ["middle"],
+      "shape": "A hidden truth about a character or the world surfaces, reframing what the cast thought they understood.",
+      "tags": ["mystery", "reveal"]
+    },
+    {
+      "id": "costly_bargain",
+      "name": "Costly bargain",
+      "fits": ["middle"],
+      "shape": "A character trades something they value for an advantage, and the price comes due in a way they did not expect.",
+      "tags": ["sacrifice", "choice"]
+    },
+    {
+      "id": "outside_pressure",
+      "name": "Outside pressure closes in",
+      "fits": ["middle"],
+      "shape": "An external faction or force tightens around the cast, forcing them to move, hide, or fight on someone else's terms.",
+      "tags": ["escalation", "antagonist"]
+    },
+    {
+      "id": "internal_conflict",
+      "name": "The group fractures",
+      "fits": ["middle"],
+      "shape": "The cast splits over a hard choice; the disagreement, not the enemy, is the episode's real obstacle.",
+      "tags": ["relationship", "choice"]
+    },
+    {
+      "id": "a_setback",
+      "name": "A plan fails",
+      "fits": ["middle"],
+      "shape": "A confident plan collapses; the cast regroups, learns something new, and has to find another way forward.",
+      "tags": ["reversal"]
+    },
+    {
+      "id": "unlikely_ally",
+      "name": "An unlikely ally",
+      "fits": ["middle"],
+      "shape": "Help arrives from an unexpected quarter — a former rival, an outsider, a forgotten resource — at a cost or with strings attached.",
+      "tags": ["relationship"]
+    },
+    {
+      "id": "final_confrontation",
+      "name": "Final confrontation",
+      "fits": ["finale"],
+      "shape": "Bring the series' central conflict to a head in a direct confrontation the cast can no longer avoid.",
+      "tags": ["climax"]
+    },
+    {
+      "id": "sacrifice_and_resolution",
+      "name": "Sacrifice and resolution",
+      "fits": ["finale"],
+      "shape": "A real cost is paid to resolve the through-line; close the arc and show how the cast and world are changed.",
+      "tags": ["climax", "sacrifice"]
+    },
+    {
+      "id": "twist_then_close",
+      "name": "A last twist, then close",
+      "fits": ["finale"],
+      "shape": "A final reversal recontextualizes the conflict, then the story resolves — leaving either peace or a deliberate hook.",
+      "tags": ["climax", "reversal"]
+    }
+  ]
+}

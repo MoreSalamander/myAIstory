@@ -52,7 +52,7 @@ seed_validate → bible_draft (frame) → arc_plan (one beat per episode)
 |---|---|---|
 | `seed_validate` | Pure-Python check that the seed is well-formed (names non-empty, theme in allowed set or free-text, episode count in bounds) | seed → validated seed |
 | `bible_draft` | LLM proposes the series bible **frame** — canon characters, theme rules, world facts — but *not* the arc | seed → draft frame |
-| `arc_plan` | **Map step:** one LLM call per episode produces that episode's arc beat, grounded in the frame + the beats already planned; each beat is gated by `arc_verify` before it joins the arc | frame → arc beats ×N |
+| `arc_plan` | **Map step:** one LLM call per episode produces that episode's arc beat, grounded in the frame + the beats already planned. The planner auto-samples one fitting **plot shape** from the curated plot kit (§ PlotKit) for the model to specialize to the cast/theme; each beat is gated by `arc_verify` before it joins the arc | frame (+ plot kit) → arc beats ×N |
 | `bible_verify` | Pure-Python: the *assembled* bible (frame + full arc) matches the seed — all named characters present, theme honored, arc one-beat-per-episode, schema valid | draft bible → verdict |
 | `series_persist` | Write `bible.json` only if verified | bible → series dir |
 
@@ -150,6 +150,8 @@ backend/myAIstory/
   verify/         Pure-Python verifiers (continuity, structure, speaker)
                   — NO LLM imports allowed in this package
   synth/          Ollama client wrapper (bible_draft, episode_draft)
+  plots/          Curated plot grab bag loader + deterministic selector
+                  — NO LLM imports allowed (pure catalog lookup, like verify/)
   tts/            Pluggable TTS interface + one local backend
   sound/          (phase 2) SoundLibrary loader + cue resolver
   mix/            (phase 2) timeline mixer: ducking, fades, placement

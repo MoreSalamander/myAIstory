@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Optional
 
 from myAIstory.events import EventEmitter
+from myAIstory.plots import PlotKit
 from myAIstory.schemas.models import Bible, DEFAULT_MINUTES, Episode
 from myAIstory.pipeline.episode import run_episode
 from myAIstory.pipeline.init import run_init
@@ -27,6 +28,7 @@ def run_series(
     target_minutes: Optional[int] = None,
     tts: Optional[TTSEngine] = None,
     library: Optional[SoundLibrary] = None,
+    kit: Optional[PlotKit] = None,
     persist: bool = True,
     max_retries: int = 2,
     max_episodes: Optional[int] = None,
@@ -36,7 +38,9 @@ def run_series(
     Returns (bible, episodes). bible is None if init failed; episodes contains
     only the ones that passed verification (skips are omitted but logged).
     """
-    bible = run_init(seed_raw, llm, emit, persist=persist, max_retries=max_retries)
+    bible = run_init(
+        seed_raw, llm, emit, persist=persist, max_retries=max_retries, kit=kit
+    )
     if bible is None:
         return None, []
 

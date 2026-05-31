@@ -50,6 +50,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--sound", metavar="DIR", nargs="?", const=str(store.DATA_ROOT / "sound_library"),
                         help="mix sound cues from this library directory "
                              "(default: data/sound_library); requires --voices")
+    parser.add_argument("--plot-kit", metavar="DIR", default=str(store.DATA_ROOT / "plot_kit"),
+                        help="curated plot grab bag the arc planner auto-samples "
+                             "(default: data/plot_kit)")
+    parser.add_argument("--no-plot-kit", action="store_true",
+                        help="plan the arc without the plot grab bag")
     args = parser.parse_args(argv)
 
     if args.seed:
@@ -80,12 +85,23 @@ def main(argv: Optional[list[str]] = None) -> int:
         except Exception as exc:
             print(f"sound disabled: {exc}", file=sys.stderr)
 
+    kit = None
+    if not args.no_plot_kit:
+        from pathlib import Path
+        from myAIstory.plots import PlotKit
+        if (Path(args.plot_kit) / "kit.json").exists():
+            try:
+                kit = PlotKit.load(args.plot_kit)
+            except Exception as exc:
+                print(f"plot kit disabled: {exc}", file=sys.stderr)
+
     llm = OllamaClient()
     bible, episodes = run_series(
         seed, llm, emit,
         target_minutes=args.minutes,
         tts=tts,
         library=library,
+        kit=kit,
         persist=persist,
         max_episodes=args.episodes,
     )

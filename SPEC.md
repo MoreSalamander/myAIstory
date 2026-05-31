@@ -225,6 +225,44 @@ made, only that its tag resolves.
 
 ---
 
+## 4c. PlotKit (the plot grab bag)
+
+A **human-owned, curated** catalog of theme-agnostic plot *shapes* the arc
+planner draws from — the structural equivalent of the sound library: the
+model may only *specialize* an offered shape to the cast and theme, never
+invent the catalog. This keeps the through-line coherent and, crucially,
+keeps an exotic or unfamiliar theme from collapsing the arc: the structure
+is fixed and human-owned; the model only does thematic dressing.
+
+A `plot_kit/kit.json` manifest catalogs reusable beat shapes:
+
+| Field | Type | Rule |
+|---|---|---|
+| `id` | str | unique slug, e.g. `betrayal_within`, `false_victory` |
+| `name` | str | human label |
+| `shape` | str | theme-agnostic structural description of the beat |
+| `fits` | list[str] | arc positions this shape suits: `opening`, `middle`, `finale` |
+| `tags` | list[str] | optional categorization (`escalation`, `reversal`, …) |
+
+**Selection policy** (deterministic, in `arc_plan`):
+- the planner maps episode 1 → `opening`, the last episode → `finale`,
+  everything between → `middle`.
+- for each beat it picks **one** fitting shape by a **stable hash** of
+  `(series_id, episode, position)` — so re-running a series draws the same
+  scaffolds (reproducible structure, mirroring the voice policy).
+- the chosen `shape` is offered to `arc_beat` as a *suggestion* to adapt; the
+  beat still passes the unchanged `arc_verify`. The kit is optional — with no
+  kit present the arc is planned exactly as before.
+
+The catalog lives **outside** any single series, shared across all of them:
+
+```
+backend/data/plot_kit/
+  kit.json              # the PlotKit manifest
+```
+
+---
+
 ## 5. Storage layout (per series)
 
 ```
