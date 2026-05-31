@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>my-AI-story</title>
+<style>
+  :root {
+    --bg: #0e0f13; --panel: #171922; --panel2: #1f2230; --ink: #e7e9ee;
+    --muted: #8b90a0; --line: #2a2e3e; --accent: #e08a3c; --accent2: #6db3f2;
+    --ok: #5ec27e; --bad: #e06c6c; --warn: #e0c14a;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--line); display: flex;
+           align-items: baseline; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: .3px; }
+  header h1 b { color: var(--accent); font-weight: 800; }
+  header .tag { color: var(--muted); font-size: 12px; }
+  .wrap { display: grid; grid-template-columns: 320px 1fr 360px; gap: 0; height: calc(100vh - 53px); }
+  .col { overflow-y: auto; padding: 16px; }
+  .col.left { border-right: 1px solid var(--line); }
+  .col.right { border-left: 1px solid var(--line); background: #101218; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted);
+       margin: 0 0 10px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea, select {
+    width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 7px; padding: 8px 10px; font-size: 13px; font-family: var(--sans);
+  }
+  textarea { resize: vertical; min-height: 52px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .chk { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .chk input { width: auto; }
+  button {
+    width: 100%; margin-top: 16px; padding: 11px; border: 0; border-radius: 8px;
+    background: var(--accent); color: #1a1206; font-weight: 700; font-size: 14px; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 6px; line-height: 1.45; }
+
+  #log { font-family: var(--mono); font-size: 12.5px; }
+  .ev { padding: 7px 10px; border-radius: 6px; margin-bottom: 5px; background: var(--panel);
+        border: 1px solid var(--line); display: flex; gap: 9px; align-items: baseline; }
+  .ev .stage { color: var(--accent2); }
+  .ev .msg { color: var(--muted); }
+  .badge { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+           text-transform: uppercase; letter-spacing: .04em; }
+  .b-pass { background: rgba(94,194,126,.15); color: var(--ok); }
+  .b-fail { background: rgba(224,108,108,.15); color: var(--bad); }
+  .b-warn { background: rgba(224,193,74,.15); color: var(--warn); }
+  .b-run  { background: rgba(109,179,242,.15); color: var(--accent2); }
+  .b-done { background: rgba(224,138,60,.18); color: var(--accent); }
+  .ev.tts .stage { color: var(--ok); }
+  #draft { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; color: #c8cdda;
+           background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+           padding: 12px; margin-top: 8px; min-height: 60px; max-height: 240px; overflow-y: auto; }
+  .seriesItem { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+                margin-bottom: 8px; cursor: pointer; background: var(--panel); }
+  .seriesItem:hover { border-color: var(--accent); }
+  .seriesItem .t { font-weight: 600; font-size: 13px; }
+  .seriesItem .m { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .epCard { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 10px;
+            background: var(--panel); }
+  .epCard .t { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .epCard .s { color: var(--muted); font-size: 12px; line-height: 1.45; margin-bottom: 8px; }
+  audio { width: 100%; margin-top: 4px; }
+  .empty { color: var(--muted); font-size: 12px; font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>my-<b>AI</b>-story</h1>
+  <span class="tag">A MoreSalamander StudioLabs production · verified multi-voice serial fiction</span>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: seed form -->
+  <div class="col left">
+    <h2>Series seed</h2>
+    <label>Title</label>
+    <input id="title" value="The Ember Cycle" />
+    <div class="row2">
+      <div><label>Theme</label><input id="theme" value="dragons" /></div>
+      <div><label>Tone</label><input id="tone" value="epic" /></div>
+    </div>
+    <label>Characters (name:role, one per line)</label>
+    <textarea id="characters">Ember:protagonist
+Ash:rival</textarea>
+    <label>Loose plot direction</label>
+    <textarea id="plot">Two dragons contest an ancient hoard beneath a dying volcano.</textarea>
+    <div class="row2">
+      <div><label>Episodes</label><input id="episode_count" type="number" min="1" max="50" value="2" /></div>
+      <div><label>Minutes / ep</label><input id="minutes" type="number" min="1" max="30" value="1" /></div>
+    </div>
+    <label>Generate only (cap episodes, optional)</label>
+    <input id="cap" type="number" min="1" placeholder="all" />
+    <div class="chk"><input id="voices" type="checkbox" /><label style="margin:0">Render audio (Piper voices)</label></div>
+    <button id="go">Generate</button>
+    <div class="hint">Streams the live pipeline: drafting → verifier gates → (optional) TTS.
+      Nothing is persisted or voiced until the pure-Python gates pass it.</div>
+  </div>
+
+  <!-- CENTER: live run -->
+  <div class="col mid">
+    <h2>Run</h2>
+    <div id="status" class="empty">Idle. Fill the seed and hit Generate.</div>
+    <div id="draft"></div>
+    <h2 style="margin-top:16px">Event stream</h2>
+    <div id="log"></div>
+  </div>
+
+  <!-- RIGHT: library + output -->
+  <div class="col right">
+    <h2>Library</h2>
+    <div id="series"></div>
+    <h2 style="margin-top:16px">Episodes</h2>
+    <div id="episodes"><div class="empty">Select a series or generate one.</div></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function buildSeed() {
+  const chars = $("characters").value.split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+    const [name, role] = l.split(":").map(s => s.trim());
+    return role ? { name, role } : { name };
+  });
+  return {
+    title: $("title").value.trim(),
+    theme: $("theme").value.trim(),
+    tone: $("tone").value.trim() || null,
+    characters: chars,
+    plot_direction: $("plot").value.trim(),
+    episode_count: parseInt($("episode_count").value, 10),
+    target_minutes: parseInt($("minutes").value, 10),
+  };
+}
+
+function badge(cls, text) { return `<span class="badge ${cls}">${text}</span>`; }
+
+function logEvent(html, cls = "") {
+  const div = document.createElement("div");
+  div.className = "ev " + cls;
+  div.innerHTML = html;
+  $("log").appendChild(div);
+  div.scrollIntoView({ block: "nearest" });
+}
+
+let currentSeriesId = null;
+let draftStage = null;
+
+function handleEvent(e) {
+  switch (e.type) {
+    case "run_start":
+      currentSeriesId = e.series_id;
+      $("status").textContent = `${e.pipeline} run started — ${e.series_id}`;
+      logEvent(`${badge("b-run", e.pipeline)} <span class="stage">run_start</span> <span class="msg">${e.series_id}${e.number ? " · ep " + e.number : ""}</span>`);
+      break;
+    case "step_start":
+      if (e.stage.endsWith("_draft")) { draftStage = e.stage; $("draft").textContent = ""; }
+      logEvent(`<span class="stage">${e.stage}</span> <span class="msg">…</span>`);
+      break;
+    case "token":
+      $("draft").textContent += e.text;
+      $("draft").scrollTop = $("draft").scrollHeight;
+      break;
+    case "step_complete":
+      logEvent(`<span class="stage">${e.stage}</span> ${badge("b-done", "ok")} <span class="msg">${e.summary || ""}</span>`);
+      break;
+    case "verify_pass":
+      logEvent(`${badge("b-pass", "pass")} <span class="stage">${e.stage}</span> <span class="msg">${(e.checks || []).join(", ")}</span>`);
+      break;
+    case "verify_fail":
+      logEvent(`${badge("b-fail", "fail")} <span class="stage">${e.stage}</span> <span class="msg">${(e.violations || []).join("; ")}</span>`);
+      break;
+    case "retry":
+      logEvent(`${badge("b-warn", "retry " + e.attempt)} <span class="stage">${e.stage}</span> <span class="msg">${e.reason || ""}</span>`);
+      break;
+    case "skip":
+      logEvent(`${badge("b-fail", "skip")} <span class="stage">${e.stage}</span> <span class="msg">${e.reason || ""}</span>`);
+      break;
+    case "tts_line":
+      logEvent(`<span class="stage">tts_line</span> <span class="msg">#${e.idx} ${e.speaker} → ${e.voice}</span>`, "tts");
+      break;
+    case "done":
+      logEvent(`${badge(e.result === "ok" ? "b-pass" : "b-fail", e.result)} <span class="stage">${e.pipeline} done</span>`);
+      if (e.pipeline === "episode" && e.result === "ok") loadEpisode(currentSeriesId, e.number);
+      break;
+    case "error":
+      logEvent(`${badge("b-fail", "error")} <span class="stage">${e.stage}</span> <span class="msg">${e.message}</span>`);
+      break;
+  }
+}
+
+async function generate() {
+  $("go").disabled = true;
+  $("log").innerHTML = "";
+  $("draft").textContent = "";
+  $("episodes").innerHTML = "";
+  $("status").textContent = "Connecting…";
+  const body = {
+    seed: buildSeed(),
+    minutes: parseInt($("minutes").value, 10),
+    episodes: $("cap").value ? parseInt($("cap").value, 10) : null,
+    voices: $("voices").checked,
+  };
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (line) handleEvent(JSON.parse(line));
+      }
+    }
+    $("status").textContent = "Run complete.";
+    refreshSeries();
+  } catch (err) {
+    $("status").textContent = "Error: " + err.message;
+  } finally {
+    $("go").disabled = false;
+  }
+}
+
+async function refreshSeries() {
+  const res = await fetch("/api/series");
+  const list = await res.json();
+  const box = $("series");
+  if (!list.length) { box.innerHTML = '<div class="empty">No series yet.</div>'; return; }
+  box.innerHTML = "";
+  for (const s of list) {
+    const div = document.createElement("div");
+    div.className = "seriesItem";
+    div.innerHTML = `<div class="t">${s.title}</div><div class="m">${s.theme} · ${s.episodes.length}/${s.episode_count} episodes</div>`;
+    div.onclick = () => loadSeries(s);
+    box.appendChild(div);
+  }
+}
+
+async function loadSeries(s) {
+  currentSeriesId = s.series_id;
+  $("episodes").innerHTML = "";
+  if (!s.episodes.length) { $("episodes").innerHTML = '<div class="empty">No verified episodes.</div>'; return; }
+  for (const n of s.episodes) loadEpisode(s.series_id, n);
+}
+
+async function loadEpisode(sid, number) {
+  const res = await fetch(`/api/series/${sid}/episode/${number}`);
+  if (!res.ok) return;
+  const ep = await res.json();
+  const card = document.createElement("div");
+  card.className = "epCard";
+  card.innerHTML = `<div class="t">Ep ${ep.number}: ${ep.title}</div><div class="s">${ep.summary}</div>
+    <audio controls src="/api/series/${sid}/audio/${number}" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'empty',textContent:'(no audio — generated text-only)'}))"></audio>`;
+  $("episodes").appendChild(card);
+}
+
+$("go").onclick = generate;
+refreshSeries();
+</script>
+</body>
+</html>

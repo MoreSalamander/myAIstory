@@ -12,3 +12,9 @@ pytest>=8.0
 # certifi gives that downloader a CA bundle on framework Python builds.
 piper-tts>=1.4
 certifi
+
+# Phase 4 — web UI. FastAPI serves the frontend and streams run events as
+# NDJSON; uvicorn is the ASGI server; httpx backs the test client.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+httpx
