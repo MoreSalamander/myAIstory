@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from myAIstory.schemas.models import (
     BEAT_KINDS,
+    MIN_SPOKEN_WORDS,
     REQUIRED_BEATS,
+    WPM_AIM,
+    WPM_MIN,
     Bible,
     SeriesSeed,
 )
@@ -180,20 +183,22 @@ def build_episode_prompt(
         "\n".join(f"  Episode {n}: {s}" for n, s in prior_summaries)
         or "  (this is the first episode)"
     )
-    low, high = target_minutes * 110, target_minutes * 170
-    # ~28 spoken words per substantial line; anchor toward the high end because
+    aim = target_minutes * WPM_AIM
+    floor = max(MIN_SPOKEN_WORDS, target_minutes * WPM_MIN)
+    # ~28 spoken words per substantial line; anchor toward the aim because
     # small models chronically under-write. Floor the minimum at a few lines.
-    min_lines = max(6, low // 28)
+    min_lines = max(6, aim // 28)
     return f"""Write episode {number} of "{bible.title}" (theme: {bible.theme}).
 
-LENGTH IS A HARD REQUIREMENT — READ THIS FIRST.
-This is a {target_minutes}-minute audio episode. It MUST contain {low}-{high}
-total spoken words, and you should aim for the HIGH end (~{high} words). Plan on
-writing at least {min_lines} substantial lines: narration in full paragraphs of
-3-5 sentences, and dialogue exchanges of more than one short reply. A script
-shorter than {low} words is AUTOMATICALLY REJECTED by a word-count checker and
-you will have to redo the entire episode — so write generously and do not wrap
-up early. Develop the scene, the setting, and the characters' inner states.
+LENGTH — WRITE A FULL EPISODE, READ THIS FIRST.
+This is a {target_minutes}-minute audio episode. Aim for about {aim} total spoken
+words so the narration fills the runtime — plan on at least {min_lines} substantial
+lines: narration in full paragraphs of 3-5 sentences, and dialogue exchanges of
+more than one short reply. Write generously and do not wrap up early — develop the
+scene, the setting, and the characters' inner states. There is NO upper word limit
+to worry about and no penalty for falling a little short of the aim; let the scene
+run as long as the beat needs. The only hard rule is that a tiny stub (under {floor}
+spoken words) is rejected — so always write a complete, fleshed-out episode.
 
 CANON CHARACTERS (only these may speak; dead characters may not speak):
 {char_lines}
@@ -220,6 +225,6 @@ Emit JSON with this shape:
 Rules:
 - "beats" entries must come from: {", ".join(BEAT_KINDS)}; include at least {", ".join(REQUIRED_BEATS)}.
 - Every dialogue "speaker" must be an EXACT canon name above; narration uses "narrator".
-- LENGTH: {low}-{high} total spoken words (aim for ~{high}). This is enforced — do not under-write.
+- LENGTH: aim for ~{aim} total spoken words (a full {target_minutes}-min episode); never write a stub under {floor} words.
 - Reference the theme "{bible.theme}" so the episode stays on-theme.{_cue_block(cue_tags)}
 {_feedback_block(feedback)}"""

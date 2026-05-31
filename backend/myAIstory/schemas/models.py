@@ -28,9 +28,23 @@ MIN_MINUTES, MAX_MINUTES, DEFAULT_MINUTES = 1, 30, 5
 MIN_CHARACTERS, MAX_CHARACTERS = 1, 12
 
 # Word-count band for structure_verify, derived from target_minutes.
-# Narrated fiction lands ~110–170 spoken words/minute; outside the band the
-# episode is too short or too long for its target runtime.
-WPM_MIN, WPM_MAX = 110, 170
+#
+# Narrated fiction lands ~110–170 spoken words/minute, but matching audio
+# runtime EXACTLY is not the goal: a complete-but-short episode is a story
+# decision, not a defect — a tight arc beat may simply not need more words,
+# and a small local model chronically under-writes against a strict floor.
+# So the verifier band is deliberately WIDE: a lenient per-minute floor that
+# only rejects genuine stubs, and a generous ceiling that only catches
+# runaway repetition. The draft prompt still AIMS for a runtime-matched
+# length (see WPM_AIM) so audio lands near the target — but falling short of
+# that aim is guidance, not a gate.
+WPM_MIN, WPM_MAX = 15, 240
+# Absolute stub guard: no matter how short the target runtime, an episode
+# below this many spoken words is not a real episode and is rejected.
+MIN_SPOKEN_WORDS = 60
+# What the *draft prompt* aims for (not enforced): a healthy runtime-matched
+# length so the rendered audio lands near the requested minutes.
+WPM_AIM = 150
 
 # Episode beat taxonomy. `beats` is a list of these kind-labels; the three
 # REQUIRED kinds must all be present (SPEC §3 "Required beat kinds").

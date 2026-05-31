@@ -11,6 +11,7 @@ from myAIstory.schemas.models import (
     BEAT_KINDS,
     DEFAULT_MINUTES,
     Episode,
+    MIN_SPOKEN_WORDS,
     REQUIRED_BEATS,
     WPM_MAX,
     WPM_MIN,
@@ -82,12 +83,15 @@ def verify_structure(
                 field=f"lines.{i}.text",
             )
 
-    # Spoken length within the band derived from target_minutes.
+    # Spoken length within the (deliberately wide) band derived from
+    # target_minutes. The floor is lenient — it only rejects genuine stubs,
+    # not complete-but-short episodes (see models.py WPM_MIN rationale).
     result.add_check("word_count_band")
     spoken = sum(
         _word_count(line.text) for line in episode.lines if line.is_speech and line.text
     )
-    low, high = target_minutes * WPM_MIN, target_minutes * WPM_MAX
+    low = max(MIN_SPOKEN_WORDS, target_minutes * WPM_MIN)
+    high = target_minutes * WPM_MAX
     if spoken < low:
         result.fail(
             "too_short",

@@ -135,8 +135,15 @@ taxonomy lives in the schema module; this is the minimum.)
 **`structure_verify`** (pure-Python, blocking):
 - schema valid; `number` matches expected episode index.
 - required beat kinds all present.
-- total spoken text length within bounds derived from `target_minutes`
-  (word-count band, deterministic).
+- total spoken text length within a **deliberately wide** band derived from
+  `target_minutes` (deterministic). Matching audio runtime exactly is *not*
+  the goal — a complete-but-short episode is a story decision, not a defect,
+  and a small local model chronically under-writes against a strict floor. So
+  the floor is lenient (`max(MIN_SPOKEN_WORDS, target_minutes·WPM_MIN)` — it
+  only rejects genuine stubs) and the ceiling is generous
+  (`target_minutes·WPM_MAX` — it only catches runaway repetition). The draft
+  prompt still *aims* for a runtime-matched length (`WPM_AIM`), but falling
+  short of that aim is guidance, not a gate.
 - `lines` non-empty; every line `text` non-empty.
 
 **`speaker_verify`** (pure-Python, blocking):
