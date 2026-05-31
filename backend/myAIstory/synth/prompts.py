@@ -39,10 +39,16 @@ def _feedback_block(feedback: list[str] | None) -> str:
     if not feedback:
         return ""
     bullets = "\n".join(f"- {v}" for v in feedback)
+    too_short = any("too_short" in v or "below the" in v for v in feedback)
+    expand = (
+        "\nYou wrote too little last time. This attempt must be SUBSTANTIALLY "
+        "longer — add more lines and lengthen existing ones; do not just tweak.\n"
+        if too_short else ""
+    )
     return (
         "\n\nYour previous attempt was REJECTED by an automated verifier for "
         "these specific reasons. Fix every one of them in this attempt:\n"
-        f"{bullets}\n"
+        f"{bullets}\n{expand}"
     )
 
 
@@ -100,7 +106,19 @@ def build_episode_prompt(
         or "  (this is the first episode)"
     )
     low, high = target_minutes * 110, target_minutes * 170
+    # ~28 spoken words per substantial line; anchor toward the high end because
+    # small models chronically under-write. Floor the minimum at a few lines.
+    min_lines = max(6, low // 28)
     return f"""Write episode {number} of "{bible.title}" (theme: {bible.theme}).
+
+LENGTH IS A HARD REQUIREMENT — READ THIS FIRST.
+This is a {target_minutes}-minute audio episode. It MUST contain {low}-{high}
+total spoken words, and you should aim for the HIGH end (~{high} words). Plan on
+writing at least {min_lines} substantial lines: narration in full paragraphs of
+3-5 sentences, and dialogue exchanges of more than one short reply. A script
+shorter than {low} words is AUTOMATICALLY REJECTED by a word-count checker and
+you will have to redo the entire episode — so write generously and do not wrap
+up early. Develop the scene, the setting, and the characters' inner states.
 
 CANON CHARACTERS (only these may speak; dead characters may not speak):
 {char_lines}
@@ -127,6 +145,6 @@ Emit JSON with this shape:
 Rules:
 - "beats" entries must come from: {", ".join(BEAT_KINDS)}; include at least {", ".join(REQUIRED_BEATS)}.
 - Every dialogue "speaker" must be an EXACT canon name above; narration uses "narrator".
-- Total spoken words across all lines must be between {low} and {high} (~{target_minutes} min).
+- LENGTH: {low}-{high} total spoken words (aim for ~{high}). This is enforced — do not under-write.
 - Reference the theme "{bible.theme}" so the episode stays on-theme.
 {_feedback_block(feedback)}"""
