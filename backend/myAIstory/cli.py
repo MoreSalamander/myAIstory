@@ -47,6 +47,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--voices", metavar="DIR",
                         help="render audio with Piper voices from this directory "
                              "(*.onnx models); omit for text-only")
+    parser.add_argument("--kokoro", metavar="DIR", nargs="?",
+                        const=str(store.DATA_ROOT / "voices_kokoro"),
+                        help="render audio with the higher-fidelity local Kokoro "
+                             "engine, using model files in this directory "
+                             "(default: data/voices_kokoro); overrides --voices")
     parser.add_argument("--sound", metavar="DIR", nargs="?", const=str(store.DATA_ROOT / "sound_library"),
                         help="mix sound cues from this library directory "
                              "(default: data/sound_library); requires --voices")
@@ -70,7 +75,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         emit.add_sink(store.event_sink(series_id))
 
     tts = None
-    if args.voices:
+    if args.kokoro:
+        from myAIstory.tts import KokoroError, KokoroTTS
+        try:
+            tts = KokoroTTS(args.kokoro)
+        except KokoroError as exc:
+            print(f"kokoro disabled: {exc}", file=sys.stderr)
+    elif args.voices:
         from myAIstory.tts import PiperError, PiperTTS
         try:
             tts = PiperTTS(args.voices)

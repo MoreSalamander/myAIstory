@@ -30,6 +30,7 @@ from myAIstory.pipeline.series import run_series
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 VOICES_DIR = store.DATA_ROOT / "voices"
+KOKORO_DIR = store.DATA_ROOT / "voices_kokoro"
 SOUND_LIBRARY_DIR = store.DATA_ROOT / "sound_library"
 PLOT_KIT_DIR = store.DATA_ROOT / "plot_kit"
 
@@ -37,9 +38,22 @@ PLOT_KIT_DIR = store.DATA_ROOT / "plot_kit"
 LLM_FACTORY: Callable[[], LLM] = OllamaClient
 
 
-def build_tts(use_voices: bool):
-    """Construct a Piper backend if voices are requested and installed."""
-    if not use_voices or not VOICES_DIR.is_dir():
+def build_tts(use_voices: bool, engine: str = "piper"):
+    """Construct a TTS backend if voices are requested and installed.
+
+    `engine` selects the local backend: "kokoro" (higher fidelity) or "piper".
+    Returns None when voices are off or the chosen backend is unavailable, so
+    the run cleanly falls back to a text-only (script) episode.
+    """
+    if not use_voices:
+        return None
+    if engine == "kokoro":
+        from myAIstory.tts import KokoroError, KokoroTTS
+        try:
+            return KokoroTTS(KOKORO_DIR)
+        except KokoroError:
+            return None
+    if not VOICES_DIR.is_dir():
         return None
     from myAIstory.tts import PiperError, PiperTTS
     try:
@@ -80,6 +94,7 @@ class GenerateRequest(BaseModel):
     minutes: Optional[int] = None
     episodes: Optional[int] = Field(default=None, ge=1)
     voices: bool = False
+    engine: str = "piper"  # "piper" | "kokoro" (higher fidelity, local)
     sound: bool = False
 
 
@@ -98,7 +113,7 @@ def _ndjson_run(req: GenerateRequest) -> Iterator[str]:
             run_series(
                 seed_raw, LLM_FACTORY(), emit,
                 target_minutes=req.minutes,
-                tts=build_tts(req.voices),
+                tts=build_tts(req.voices, req.engine),
                 library=build_library(req.sound),
                 kit=build_kit(),
                 max_episodes=req.episodes,

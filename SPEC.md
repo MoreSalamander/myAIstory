@@ -220,7 +220,12 @@ voice policy + any per-character `voice` choices in the seed.
   the assignment remains deterministic and recorded in the bible.
 
 **Available-voices registry**: provided by the active TTS backend through
-the pluggable interface (`tts/`), as a list of `{id, label, sample?}`.
+the pluggable interface (`tts/`), as a list of `{id, label, sample?}`. Two
+local backends ship: **Piper** (fast, `.onnx` voice models in `data/voices/`)
+and **Kokoro** (higher-fidelity Kokoro-82M via ONNX, model files in
+`data/voices_kokoro/`, ~54 built-in voices). Both implement the same protocol,
+so deterministic casting is identical — only the registry differs. Selected per
+run: CLI `--kokoro [DIR]` / `--voices DIR`; API `engine: "kokoro" | "piper"`.
 
 ---
 

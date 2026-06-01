@@ -18,8 +18,9 @@ voices/*.wav
 .cache/
 models/
 
-# Downloaded TTS voice models (large binaries; fetched via piper.download_voices)
+# Downloaded TTS voice models (large binaries; fetched on demand)
 backend/data/voices/
+backend/data/voices_kokoro/
 
 # Env
 .env
