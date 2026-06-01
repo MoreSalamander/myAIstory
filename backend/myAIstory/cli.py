@@ -56,8 +56,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                         const=str(store.DATA_ROOT / "voice_refs"),
                         help="render audio by cloning reference clips in this "
                              "directory (one <id>.wav per voice, ~6-15s each) "
-                             "with XTTS-v2 (default: data/voice_refs); overrides "
-                             "--kokoro/--voices")
+                             "with Chatterbox (default: data/voice_refs); "
+                             "overrides --kokoro/--voices")
     parser.add_argument("--sound", metavar="DIR", nargs="?", const=str(store.DATA_ROOT / "sound_library"),
                         help="mix sound cues from this library directory "
                              "(default: data/sound_library); requires --voices")

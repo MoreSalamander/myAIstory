@@ -42,7 +42,7 @@ LLM_FACTORY: Callable[[], LLM] = OllamaClient
 def build_tts(use_voices: bool, engine: str = "piper"):
     """Construct a TTS backend if voices are requested and installed.
 
-    `engine` selects the local backend: "clone" (XTTS-v2 voice cloning from
+    `engine` selects the local backend: "clone" (Chatterbox voice cloning from
     reference clips), "kokoro" (higher fidelity), or "piper". Returns None when
     voices are off or the chosen backend is unavailable, so the run cleanly
     falls back to a text-only (script) episode.
@@ -102,7 +102,7 @@ class GenerateRequest(BaseModel):
     minutes: Optional[int] = None
     episodes: Optional[int] = Field(default=None, ge=1)
     voices: bool = False
-    engine: str = "piper"  # "piper" | "kokoro" (higher fidelity) | "clone" (XTTS-v2)
+    engine: str = "piper"  # "piper" | "kokoro" (higher fidelity) | "clone" (Chatterbox)
     sound: bool = False
 
 

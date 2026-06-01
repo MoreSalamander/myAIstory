@@ -223,9 +223,10 @@ voice policy + any per-character `voice` choices in the seed.
 the pluggable interface (`tts/`), as a list of `{id, label, sample?}`. Three
 local backends ship: **Piper** (fast, `.onnx` voice models in `data/voices/`),
 **Kokoro** (higher-fidelity Kokoro-82M via ONNX, model files in
-`data/voices_kokoro/`, ~54 built-in voices), and **Clone** (XTTS-v2 voice
-cloning — each reference clip you drop in `data/voice_refs/<id>.wav` (~6-15s)
-becomes a castable voice matching that timbre). All implement the same
+`data/voices_kokoro/`, ~54 built-in voices), and **Clone** (Chatterbox voice
+cloning — each reference clip you drop in `data/voice_refs/<id>.wav` (a few
+seconds) becomes a castable voice matching that timbre, with an `exaggeration`
+knob for delivery intensity). All implement the same
 protocol, so deterministic casting is identical — only the registry differs.
 Selected per run: CLI `--clone [DIR]` / `--kokoro [DIR]` / `--voices DIR`; API
 `engine: "clone" | "kokoro" | "piper"`.

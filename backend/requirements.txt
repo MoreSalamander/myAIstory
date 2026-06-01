@@ -19,13 +19,14 @@ certifi
 # kokoro-onnx release. Selected per run with --kokoro / engine="kokoro".
 kokoro-onnx>=0.4
 
-# Voice cloning (optional, heaviest backend): XTTS-v2 via the maintained Coqui
-# fork. Unlike Piper/Kokoro's fixed timbres, this matches a SHORT reference clip
-# you supply (data/voice_refs/<id>.wav, ~6-15s) — so you can cast a specific
-# voice. Pulls in PyTorch and downloads the XTTS model once into Coqui's cache.
-# Install only when you want cloning (selected with --clone / engine="clone");
-# left commented because torch wheels lag new Python releases.
-# coqui-tts>=0.24
+# Voice cloning (optional, heaviest backend): Chatterbox (Resemble AI). Unlike
+# Piper/Kokoro's fixed timbres, this matches a SHORT reference clip you supply
+# (data/voice_refs/<id>.wav) — so you can cast a specific voice, with an
+# exaggeration knob for delivery intensity. Pulls in PyTorch (+ transformers,
+# gradio, etc.) and downloads the model once into the HF cache. Install only
+# when you want cloning (selected with --clone / engine="clone"); left commented
+# so a plain `pip install -r` doesn't force a multi-GB download on every setup.
+# chatterbox-tts>=0.1.7
 
 # Phase 4 — web UI. FastAPI serves the frontend and streams run events as
 # NDJSON; uvicorn is the ASGI server; httpx backs the test client.
