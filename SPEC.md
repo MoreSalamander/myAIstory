@@ -101,7 +101,20 @@ Produced by `episode_draft`, gated by three verifiers, persisted as
 | `summary` | str | 1–3 sentence recap; fed into later episodes' `context_load` |
 | `beats` | list[str] | the episode's structural beats; must cover the required beat kinds (below) |
 | `lines` | list[Line] | ordered narration + dialogue |
-| `new_facts` | list[str] | canon proposed for `bible_update` (deaths, reveals, new characters) |
+| `new_facts` | list[str] | world canon proposed for `bible_update` (reveals, events, places) |
+| `new_characters` | list[NewCharacter] | recurring characters the episode introduces, **proposed** for canon; promoted by `bible_update` so *later* episodes may name them. Empty unless someone is introduced |
+| `deaths` | list[str] | exact canon names who died this episode; `bible_update` flips their `status` to `dead` |
+
+**NewCharacter**: `{ name: str, role: str|null, status: "alive"|"dead"|"unknown" }`
+— a *proposal* only. The episode draft has no write authority over canon: the
+only path a proposed character enters the source of truth is the verified
+`bible_update` stage. A character a draft **explicitly declares** in
+`new_characters` *may* speak in the same episode it is introduced — the
+`speaker_salvage` step (below) admits it via an augmented, in-memory view so the
+gates accept it, while persisted promotion still happens only in `bible_update`.
+An **undeclared** invented name given a line is *not* canon: `speaker_salvage`
+demotes that line to `narrator`. Incidental, one-off voices (a guard, a vendor)
+should be attributed to `narrator` from the start, never to an invented name.
 
 **Line** (the timeline unit — speech *or*, in phase 2, an audio cue)
 
@@ -121,6 +134,24 @@ exist in the schema from day one so phase 2 adds no breaking change.
 taxonomy lives in the schema module; this is the minimum.)
 
 ### Verifier acceptance criteria (the three gates)
+
+**`speaker_salvage`** (pure-Python, *non-blocking* — runs **before** the gates):
+- the speaker analog of `cue_verify`: it cleans the one salvageable failure mode
+  rather than letting it skip a whole episode. A small local model chronically
+  invents a one-off speaker name for an incidental voice (a guard, a blacksmith)
+  instead of using `narrator`.
+- a dialogue line whose `speaker` is neither a canon name/alias, `narrator`, nor
+  a character this draft **declares** in `new_characters` is **demoted to
+  narration** (text preserved; `speaker` → `narrator`). A `speaker_salvage`
+  step is logged when any line is demoted.
+- a **declared** newcomer (validated, non-colliding) is admitted via an
+  augmented in-memory bible/voice-map view so `continuity_verify` and
+  `speaker_verify` accept it as a legitimate same-episode introduction. This
+  view never mutates the persistent bible — canon growth stays `bible_update`'s
+  sole job, so trust isolation holds.
+- it **never** substitutes for a gate: a *dead* canon character who speaks is
+  left untouched (a real contradiction `continuity_verify` must still reject),
+  and anything it cannot legitimately salvage fails verification normally.
 
 **`continuity_verify`** (pure-Python, blocking):
 - every `speaker` resolves to a canon character (by name or alias) or is

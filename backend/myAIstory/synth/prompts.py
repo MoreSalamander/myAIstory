@@ -48,10 +48,22 @@ def _feedback_block(feedback: list[str] | None) -> str:
         "longer — add more lines and lengthen existing ones; do not just tweak.\n"
         if too_short else ""
     )
+    bad_speaker = any(
+        "unresolved_speaker" in v or "no_voice_for_speaker" in v
+        or "is neither" in v for v in feedback
+    )
+    fix_speaker = (
+        "\nYou attributed a line to a speaker who is NOT a canon character. Every "
+        "dialogue 'speaker' must be one of the EXACT canon names listed above; for "
+        "any incidental or background voice (a guard, a vendor, a crowd) use "
+        '"narrator" instead of inventing a name. If you need a recurring NEW '
+        "character, put them in \"new_characters\" — do not give an unlisted name a "
+        "line.\n" if bad_speaker else ""
+    )
     return (
         "\n\nYour previous attempt was REJECTED by an automated verifier for "
         "these specific reasons. Fix every one of them in this attempt:\n"
-        f"{bullets}\n{expand}"
+        f"{bullets}\n{expand}{fix_speaker}"
     )
 
 
@@ -212,8 +224,19 @@ to worry about and no penalty for falling a little short of the aim; let the sce
 run as long as the beat needs. The only hard rule is that a tiny stub (under {floor}
 spoken words) is rejected — so always write a complete, fleshed-out episode.
 
-CANON CHARACTERS (only these may speak; dead characters may not speak):
+CANON CHARACTERS — THE ONLY NAMES THAT MAY SPEAK:
 {char_lines}
+A dialogue line's "speaker" MUST be one of these EXACT names, or "narrator".
+This is strictly enforced: a line attributed to any other name is REJECTED and
+you redo the whole episode. For ANY incidental or background voice — a guard, a
+vendor, a messenger, a crowd — DO NOT invent a name; either attribute the line to
+"narrator" (e.g. narrate what they say) or describe them in narration. A dead
+character may not speak.
+
+If the story genuinely needs a NEW recurring character, introduce them in
+narration and list them under "new_characters" — they then become canon and may
+speak in LATER episodes (not this one). Likewise, if a canon character dies, list
+their exact name under "deaths".
 
 STORY SO FAR:
 {recap}
@@ -229,14 +252,18 @@ Emit JSON with this shape:
   "beats": ["opening", "development", "resolution_or_hook"],
   "lines": [
     {{"kind": "narration", "speaker": "narrator", "text": "..."}},
-    {{"kind": "dialogue", "speaker": "EXACT character name", "text": "..."}}
+    {{"kind": "dialogue", "speaker": "EXACT canon name or narrator", "text": "..."}}
   ],
-  "new_facts": ["any new canon: a death, a reveal, a new character"]
+  "new_facts": ["any new world canon: a reveal, an event, a place"],
+  "new_characters": [{{"name": "New Name", "role": "...", "status": "alive"}}],
+  "deaths": ["exact canon name who died this episode"]
 }}
+("new_characters" and "deaths" are usually empty — only fill them when the story
+actually introduces or kills someone.)
 
 Rules:
 - "beats" entries must come from: {", ".join(BEAT_KINDS)}; include at least {", ".join(REQUIRED_BEATS)}.
-- Every dialogue "speaker" must be an EXACT canon name above; narration uses "narrator".
+- Every dialogue "speaker" must be an EXACT canon name above, or "narrator". NEVER invent a speaker name — incidental voices use "narrator".
 - LENGTH: aim for ~{aim} total spoken words (a full {target_minutes}-min episode); never write a stub under {floor} words.
 - Reference the theme "{bible.theme}" so the episode stays on-theme.{_cue_block(cue_tags)}
 {_feedback_block(feedback)}"""

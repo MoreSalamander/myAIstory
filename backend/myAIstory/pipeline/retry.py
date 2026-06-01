@@ -19,6 +19,7 @@ from myAIstory.verify.result import VerifyResult
 
 Produce = Callable[[Optional[list[str]]], str]
 Gate = Callable[[dict], VerifyResult]
+Repair = Callable[[dict], None]
 
 
 def run_with_retry(
@@ -28,11 +29,18 @@ def run_with_retry(
     *,
     stage: str,
     max_retries: int = 2,
+    repair: Optional[Repair] = None,
 ) -> tuple[Optional[dict], list[VerifyResult]]:
     """Draft-and-gate with bounded retries.
 
     Returns (obj, results) on success, or (None, results) if the retry budget is
     exhausted. Total attempts = max_retries + 1.
+
+    ``repair`` is an optional deterministic cleanup applied to the parsed object
+    *before* the gates run — the cue_verify philosophy ("clean salvageable
+    output rather than hard-fail it"). It mutates the object in place; the gates
+    then judge the cleaned draft. It never substitutes for a gate: anything the
+    repair cannot salvage still fails verification normally.
     """
     feedback: Optional[list[str]] = None
     last_results: list[VerifyResult] = []
@@ -47,6 +55,8 @@ def run_with_retry(
             violations = [f"json_parse: {exc}"]
             last_results = []
         else:
+            if repair is not None:
+                repair(obj)
             last_results = [gate(obj) for gate in gates]
             violations = [str(v) for r in last_results for v in r.violations]
             if not violations:

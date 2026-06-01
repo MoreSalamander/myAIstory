@@ -183,6 +183,142 @@ def test_episode_json_parse_failure_retries(bible):
     assert any("json_parse" in v for e in fails for v in e["violations"])
 
 
+# --- bible_update: the verified canon-growth stage ---------------------------
+
+def _episode_with_canon_updates(number: int = 1) -> str:
+    """A valid episode that proposes a new character and a death."""
+    base = json.loads(episode_json(number=number))
+    base["new_facts"] = ["The hoard was older than the volcano."]
+    base["new_characters"] = [
+        {"name": "Vesh", "role": "guard captain", "status": "alive"},
+        {"name": "ember", "role": "dup"},   # collides (case-insensitive) → skipped
+    ]
+    base["deaths"] = ["Ash"]
+    return json.dumps(base)
+
+
+def test_bible_update_grows_canon(bible, tmp_path, monkeypatch):
+    import myAIstory.store as store
+    monkeypatch.setattr(store, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(store, "SERIES_ROOT", tmp_path / "series")
+
+    events, emit = _capture()
+    llm = ScriptedLLM({"episode_draft": [_episode_with_canon_updates(1)]})
+    ep = run_episode(bible.series_id, 1, llm, emit, bible=bible,
+                     target_minutes=1, persist=True)
+    assert ep is not None
+
+    updated = store.read_bible(bible.series_id)
+    names = [c.name for c in updated.characters]
+    assert "Vesh" in names                       # new character promoted
+    assert names.count("Vesh") == 1              # only once
+    assert "ember" not in [n.lower() for n in names if n != "Ember"]  # dup skipped
+    statuses = {c.name: c.status for c in updated.characters}
+    assert statuses["Ash"] == "dead"             # death applied to status
+    assert statuses["Ember"] == "alive"          # untouched
+    assert any(f.statement == "The hoard was older than the volcano."
+               for f in updated.world_facts)
+    assert any(e["type"] == "step_complete" and e.get("stage") == "bible_update"
+               for e in events)
+
+
+def test_bible_update_lets_new_character_speak_next_episode(bible, tmp_path, monkeypatch):
+    """A character introduced in ep1 is canon, so ep2 may give them a line."""
+    import myAIstory.store as store
+    monkeypatch.setattr(store, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(store, "SERIES_ROOT", tmp_path / "series")
+
+    # ep1 kills Ash, so ep2 must not have Ash speak; Ember + the new canon Vesh do.
+    ep2 = {
+        "number": 2,
+        "title": "Ep 2",
+        "summary": "Ember meets the guard captain.",
+        "beats": ["opening", "development", "resolution_or_hook"],
+        "lines": [
+            {"kind": "narration", "speaker": "narrator",
+             "text": " ".join(["dragon"] + ["word"] * 79)},
+            {"kind": "dialogue", "speaker": "Ember", "text": "Who guards this hoard?"},
+            {"kind": "dialogue", "speaker": "Vesh", "text": "Halt, dragon."},
+        ],
+        "new_facts": [], "new_characters": [], "deaths": [],
+    }
+
+    events, emit = _capture()
+    llm = ScriptedLLM({"episode_draft": [_episode_with_canon_updates(1), json.dumps(ep2)]})
+
+    e1 = run_episode(bible.series_id, 1, llm, emit, bible=bible,
+                     target_minutes=1, persist=True)
+    assert e1 is not None
+    # ep2 reuses the in-memory bible, now containing Vesh → speaker_verify passes.
+    e2 = run_episode(bible.series_id, 2, llm, emit, bible=bible,
+                     target_minutes=1, persist=True)
+    assert e2 is not None
+    assert "Vesh" in {l.speaker for l in e2.lines}
+
+
+# --- speaker_salvage: pre-gate deterministic cleanup -------------------------
+
+def _episode_with_undeclared_speaker(number: int = 1) -> str:
+    """A valid episode that gives an invented incidental voice a line.
+
+    'Blacksmith' is neither canon nor declared in new_characters — exactly the
+    small-model failure mode that used to skip whole episodes.
+    """
+    base = json.loads(episode_json(number=number))
+    base["lines"].append(
+        {"kind": "dialogue", "speaker": "Blacksmith", "text": "Halt, dragon."}
+    )
+    return json.dumps(base)
+
+
+def _episode_introduces_speaking_newcomer(number: int = 1) -> str:
+    """A valid episode that DECLARES a newcomer and lets them speak at once."""
+    base = json.loads(episode_json(number=number))
+    base["new_characters"] = [{"name": "Vesh", "role": "guard", "status": "alive"}]
+    base["lines"].append(
+        {"kind": "dialogue", "speaker": "Vesh", "text": "Halt, dragon."}
+    )
+    return json.dumps(base)
+
+
+def test_episode_salvages_undeclared_speaker(bible):
+    """An invented incidental speaker is demoted to narrator, not skipped."""
+    events, emit = _capture()
+    llm = ScriptedLLM({"episode_draft": [_episode_with_undeclared_speaker(1)]})
+    ep = run_episode("sid", 1, llm, emit, bible=bible, target_minutes=1, persist=False)
+    assert ep is not None                       # NOT skipped
+    assert len(llm.calls) == 1                  # salvaged on the first attempt
+    # The Blacksmith line survives as narration, delivered by the narrator.
+    salvaged = [l for l in ep.lines if l.text == "Halt, dragon."]
+    assert salvaged and all(l.speaker == "narrator" and l.kind == "narration"
+                            for l in salvaged)
+    assert {l.speaker for l in ep.lines} <= {"narrator", "Ember", "Ash"}
+    assert any(e["type"] == "step_complete" and e.get("stage") == "speaker_salvage"
+               for e in events)
+
+
+def test_episode_keeps_declared_speaker_and_promotes(bible, tmp_path, monkeypatch):
+    """A speaker DECLARED in new_characters may speak this episode and is promoted."""
+    import myAIstory.store as store
+    monkeypatch.setattr(store, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(store, "SERIES_ROOT", tmp_path / "series")
+
+    events, emit = _capture()
+    llm = ScriptedLLM({"episode_draft": [_episode_introduces_speaking_newcomer(1)]})
+    ep = run_episode(bible.series_id, 1, llm, emit, bible=bible,
+                     target_minutes=1, persist=True)
+    assert ep is not None
+    assert len(llm.calls) == 1                  # accepted without a retry
+    # Declared newcomer speaks in THIS episode — NOT demoted to narrator.
+    assert "Vesh" in {l.speaker for l in ep.lines}
+    # …and was promoted into canon by the verified bible_update stage.
+    updated = store.read_bible(bible.series_id)
+    assert "Vesh" in [c.name for c in updated.characters]
+    # Nothing to salvage: a declared speaker triggers no demotion event.
+    assert not any(e["type"] == "step_complete" and e.get("stage") == "speaker_salvage"
+                   for e in events)
+
+
 # --- run_series --------------------------------------------------------------
 
 def test_series_end_to_end(seed):

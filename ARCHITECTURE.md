@@ -71,9 +71,9 @@ my-AI-stro advisor, which builds a multi-section study guide one section per cal
 Runs once per episode, in order. Episode N may read prior episode summaries.
 
 ```
-context_load → episode_draft → continuity_verify → structure_verify
-   → speaker_verify → [cue_verify]ᵖ² → voice_assign → tts_synth
-   → stitch/mix → episode_persist → bible_update → done
+context_load → episode_draft → speaker_salvage → continuity_verify
+   → structure_verify → speaker_verify → [cue_verify]ᵖ² → voice_assign
+   → tts_synth → stitch/mix → episode_persist → bible_update → done
 ```
 
 ᵖ² = phase-2 stage. In v1 the flow runs without `cue_verify`, and `stitch`
@@ -83,6 +83,7 @@ is plain sequential concatenation.
 |---|---|---|
 | `context_load` | Load bible + prior episode summaries → build the constraint context for this episode | series dir → context |
 | `episode_draft` | LLM drafts episode prose + speaker-tagged dialogue under context + plot direction | context → draft episode |
+| `speaker_salvage` | **Non-blocking cleanup** (the speaker analog of `cue_verify`). Pure-Python, runs before the gates: a dialogue line whose speaker is neither canon/alias, narrator, nor a **declared** newcomer is demoted to narration (text kept, narrator delivers it); a speaker the draft declares in `new_characters` is accepted via an augmented bible/voice-map view so it may speak this episode. Salvageable drafts are cleaned, not skipped; the persistent canon is never touched here | draft → cleaned draft |
 | `continuity_verify` | **Gate.** Pure-Python: names/theme/established facts match bible; no contradictions | draft → verdict |
 | `structure_verify` | **Gate.** Pure-Python: schema satisfied (beats present, length in bounds, dialogue well-formed) | draft → verdict |
 | `speaker_verify` | **Gate.** Pure-Python: every spoken line maps to a known speaker or narrator | draft → verdict |
@@ -91,13 +92,22 @@ is plain sequential concatenation.
 | `tts_synth` | Local TTS renders each speech line in its assigned voice | voiced script → line clips |
 | `stitch` (→ `mix` ᵖ²) | v1: concatenate line clips in order. Phase 2: mix speech + cues on a timeline — place one-shot sfx, loop/fade `under` beds, duck beds beneath speech | clips (+cues) → `NN.wav` |
 | `episode_persist` | Write `episodes/NN.json` + `audio/NN.wav` (only verified episodes reach here) | episode → series dir |
-| `bible_update` | Verified bible-update stage: append this episode's new canon facts (deaths, reveals, new characters) back to the bible | episode → updated bible |
+| `bible_update` | Verified bible-update stage: append new world facts, **promote proposed `new_characters` to CanonCharacters** (validated, deduped against existing names/aliases) so later episodes may name them, and flip `status` for `deaths`. The only path by which prose-proposed canon enters the source of truth | episode → updated bible |
 
 **Gate semantics**: `continuity_verify`, `structure_verify`, and
 `speaker_verify` are blocking. A failure routes back to `episode_draft`
 with the specific violation, for a **bounded** number of retries (default
 2). After the bound, the episode is **skipped and logged** — never
 force-persisted. See `CONSTITUTION.md`.
+
+`speaker_salvage` runs *before* the gates and is **non-blocking**: it
+deterministically cleans the one salvageable failure mode that otherwise
+dominated skips (a small model inventing a one-off incidental speaker — a
+guard, a blacksmith — instead of using the narrator). It never substitutes for
+a gate; anything it cannot legitimately salvage still fails verification
+normally. The bounded retries are thus reserved for *real* defects (too short,
+a missing beat, a dead character speaking), not for an attribution the system
+can repair on its own.
 
 ---
 

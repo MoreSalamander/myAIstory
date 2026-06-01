@@ -161,6 +161,22 @@ class Line(BaseModel):
         return self.kind in CUE_KINDS
 
 
+class NewCharacter(BaseModel):
+    """A character the episode introduces, PROPOSED for canon (SPEC §3).
+
+    The episode draft has no write authority over canon — this is only a
+    proposal. `bible_update` (the verified stage) validates it and, if it does
+    not collide with existing canon, promotes it to a CanonCharacter so LATER
+    episodes may legally use it. Prose never silently edits the source of truth.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str = Field(min_length=1)
+    role: Optional[str] = None
+    status: CharacterStatus = "alive"
+
+
 class Episode(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -170,6 +186,12 @@ class Episode(BaseModel):
     beats: list[str] = Field(default_factory=list)
     lines: list[Line] = Field(default_factory=list)
     new_facts: list[str] = Field(default_factory=list)
+    # Canon proposals applied by the verified bible_update stage (never by the
+    # draft directly). Recurring characters the episode introduces, and canon
+    # characters who died this episode — both grow/change canon for the NEXT
+    # episode, so the story's cast can legally expand over a series.
+    new_characters: list[NewCharacter] = Field(default_factory=list)
+    deaths: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
