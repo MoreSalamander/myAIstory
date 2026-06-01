@@ -22,6 +22,9 @@ models/
 backend/data/voices/
 backend/data/voices_kokoro/
 
+# User-supplied voice-cloning reference clips (XTTS-v2); local audio, never committed
+backend/data/voice_refs/
+
 # Env
 .env
 .env.local

@@ -31,6 +31,7 @@ from myAIstory.pipeline.series import run_series
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 VOICES_DIR = store.DATA_ROOT / "voices"
 KOKORO_DIR = store.DATA_ROOT / "voices_kokoro"
+CLONE_DIR = store.DATA_ROOT / "voice_refs"
 SOUND_LIBRARY_DIR = store.DATA_ROOT / "sound_library"
 PLOT_KIT_DIR = store.DATA_ROOT / "plot_kit"
 
@@ -41,12 +42,19 @@ LLM_FACTORY: Callable[[], LLM] = OllamaClient
 def build_tts(use_voices: bool, engine: str = "piper"):
     """Construct a TTS backend if voices are requested and installed.
 
-    `engine` selects the local backend: "kokoro" (higher fidelity) or "piper".
-    Returns None when voices are off or the chosen backend is unavailable, so
-    the run cleanly falls back to a text-only (script) episode.
+    `engine` selects the local backend: "clone" (XTTS-v2 voice cloning from
+    reference clips), "kokoro" (higher fidelity), or "piper". Returns None when
+    voices are off or the chosen backend is unavailable, so the run cleanly
+    falls back to a text-only (script) episode.
     """
     if not use_voices:
         return None
+    if engine == "clone":
+        from myAIstory.tts import CloneError, CloneTTS
+        try:
+            return CloneTTS(CLONE_DIR)
+        except CloneError:
+            return None
     if engine == "kokoro":
         from myAIstory.tts import KokoroError, KokoroTTS
         try:
@@ -94,7 +102,7 @@ class GenerateRequest(BaseModel):
     minutes: Optional[int] = None
     episodes: Optional[int] = Field(default=None, ge=1)
     voices: bool = False
-    engine: str = "piper"  # "piper" | "kokoro" (higher fidelity, local)
+    engine: str = "piper"  # "piper" | "kokoro" (higher fidelity) | "clone" (XTTS-v2)
     sound: bool = False
 
 

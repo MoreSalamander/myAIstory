@@ -162,7 +162,7 @@ backend/myAIstory/
   synth/          Ollama client wrapper (bible_draft, episode_draft)
   plots/          Curated plot grab bag loader + deterministic selector
                   — NO LLM imports allowed (pure catalog lookup, like verify/)
-  tts/            Pluggable TTS interface + local backends (Piper, Kokoro)
+  tts/            Pluggable TTS interface + local backends (Piper, Kokoro, Clone)
   sound/          (phase 2) SoundLibrary loader + cue resolver
   mix/            (phase 2) timeline mixer: ducking, fades, placement
   events.py       NDJSON event emitter

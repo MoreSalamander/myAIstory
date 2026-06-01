@@ -52,6 +52,12 @@ def main(argv: Optional[list[str]] = None) -> int:
                         help="render audio with the higher-fidelity local Kokoro "
                              "engine, using model files in this directory "
                              "(default: data/voices_kokoro); overrides --voices")
+    parser.add_argument("--clone", metavar="DIR", nargs="?",
+                        const=str(store.DATA_ROOT / "voice_refs"),
+                        help="render audio by cloning reference clips in this "
+                             "directory (one <id>.wav per voice, ~6-15s each) "
+                             "with XTTS-v2 (default: data/voice_refs); overrides "
+                             "--kokoro/--voices")
     parser.add_argument("--sound", metavar="DIR", nargs="?", const=str(store.DATA_ROOT / "sound_library"),
                         help="mix sound cues from this library directory "
                              "(default: data/sound_library); requires --voices")
@@ -75,7 +81,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         emit.add_sink(store.event_sink(series_id))
 
     tts = None
-    if args.kokoro:
+    if args.clone:
+        from myAIstory.tts import CloneError, CloneTTS
+        try:
+            tts = CloneTTS(args.clone)
+        except CloneError as exc:
+            print(f"clone disabled: {exc}", file=sys.stderr)
+    elif args.kokoro:
         from myAIstory.tts import KokoroError, KokoroTTS
         try:
             tts = KokoroTTS(args.kokoro)

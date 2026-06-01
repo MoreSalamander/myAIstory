@@ -8,6 +8,7 @@ episode track without caring which backend produced them.
 """
 
 from myAIstory.tts.base import Clip, TTSEngine, Voice
+from myAIstory.tts.clone import CloneError, CloneTTS
 from myAIstory.tts.kokoro import KokoroError, KokoroTTS
 from myAIstory.tts.piper import PiperError, PiperTTS
 from myAIstory.tts.scripted import ScriptedTTS
@@ -22,6 +23,8 @@ __all__ = [
     "PiperError",
     "KokoroTTS",
     "KokoroError",
+    "CloneTTS",
+    "CloneError",
     "stitch",
     "silence",
     "DEFAULT_GAP_MS",
