@@ -212,7 +212,15 @@ def build_episode_prompt(
     # ~28 spoken words per substantial line; anchor toward the aim because
     # small models chronically under-write. Floor the minimum at a few lines.
     min_lines = max(6, aim // 28)
-    return f"""Write episode {number} of "{bible.title}" (theme: {bible.theme}).
+    # Tone shapes the bible (Pipeline A), but the narration's *voice* only lands
+    # if it reaches the prose too — so carry it into the draft, prominently. For
+    # style-forward formats (a documentary register, a noir, a fable) this is
+    # what makes every line sound right rather than generic.
+    tone_block = (
+        f"\n\nNARRATION VOICE — write EVERY line in this register:\n  {bible.tone}"
+        if bible.tone else ""
+    )
+    return f"""Write episode {number} of "{bible.title}" (theme: {bible.theme}).{tone_block}
 
 LENGTH — WRITE A FULL EPISODE, READ THIS FIRST.
 This is a {target_minutes}-minute audio episode. Aim for about {aim} total spoken

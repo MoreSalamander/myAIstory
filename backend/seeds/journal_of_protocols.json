@@ -1,0 +1,14 @@
+{
+  "title": "The Journal of Informal Human Protocols",
+  "theme": "petty everyday human rituals — 'Not It', 'Shotgun', 'Dibs', 'Tap Tap Spot Back', 'Finders Keepers', 'I Called It' — documented with the reverence of a wildlife study",
+  "tone": "David Attenborough nature-documentary narration: hushed, reverent, dry, and deadpan; trivial social customs treated as profound evolutionary behaviours observed in the wild. Long unhurried sentences, precise faux-academic vocabulary, the occasional wry understatement. PURE NARRATION ONLY — the observer narrates everything; the specimens are NEVER given their own voice. Any cry they make is quoted and reported by the narrator, not spoken as dialogue. An imprint of the University of Nowhere Press.",
+  "characters": [
+    {"name": "The Caller", "role": "the specimen who invokes the verbal protocol in time"},
+    {"name": "The Latecomer", "role": "the slow specimen who fails to call and bears the consequence"},
+    {"name": "The Witness", "role": "a herd member who validates or ignores the claim"},
+    {"name": "The Arbiter", "role": "the reluctant resolver of contested calls"}
+  ],
+  "plot_direction": "An anthology field study by the University of Nowhere expedition. Each episode documents ONE informal human protocol as if observing rare fauna, in PURE NARRATION: every line is the unseen observer's narration — the specimens NEVER speak in their own voice; their cries are reported and quoted within the narration. For each ritual: establish the habitat, introduce the specimens, document the protocol unfolding, identify the winner and the one saddled with the consequence, and close on a wry evolutionary reflection. CRUCIAL — each protocol has PRECISE mechanics; honour them exactly. NOT IT: a protocol for SHEDDING an undesirable task. When a chore must be assigned (taking out the garbage, answering the door), members cry 'Not it!'; calling it makes you EXEMPT, and the specimen who fails to call — the last, the slowest, the distracted — is the loser, saddled with the task. SHOTGUN: the FIRST to cry 'Shotgun!' within sight of a vehicle claims its front passenger seat. DIBS: the first to cry 'Dibs!' secures a desirable unclaimed object or spot. TAP TAP SPOT BACK: a reflexive protocol to reclaim a temporarily-vacated position. FINDERS KEEPERS: whoever discovers an unclaimed item may keep it; the prior holder forfeits all claim. I CALLED IT: a verbal reservation establishing prior claim over a contested resource. Note the deep divide the expedition has catalogued: most protocols (Shotgun, Dibs, I Called It) ACQUIRE a desired thing and reward the swift; NOT IT alone SHEDS an unwanted thing and punishes the slow. Episode order: Not It, Shotgun, Dibs, Tap Tap Spot Back, Finders Keepers, I Called It.",
+  "episode_count": 6,
+  "target_minutes": 3
+}
