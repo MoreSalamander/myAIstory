@@ -4,81 +4,152 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>my-AI-story — a verified multi-episode story generator with multi-voice narration</title>
-<meta name="description" content="Seed a world; my-AI-story generates a coherent serialized story episode after episode, narrated with a distinct voice per character — every episode verified against a series bible so episode 7 still remembers episode 1. Local-first." />
+<meta name="description" content="Seed a world; my-AI-story writes a coherent serialized story, episode after episode, narrated with a distinct voice per character — every episode verified against a series bible so episode 7 still remembers episode 1. Watch the continuity gate catch a contradiction." />
 <style>
   :root {
     --bg:#0c0a12; --panel:#16121f; --line:#2a2335; --ink:#ece6f3; --dim:#9a8fa8;
-    --accent:#a78bfa; --accent2:#f0abfc; --green:#5bbf8f; --red:#e0556b;
+    --accent:#a78bfa; --amber:#fbbf24; --blue:#38bdf8; --red:#e0556b; --ok:#5bbf8f;
     --mono:ui-monospace,SFMono-Regular,Menlo,monospace; --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   }
   *{box-sizing:border-box;} body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased;}
   a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
-  .wrap{max-width:840px;margin:0 auto;padding:0 22px 110px;}
-  header{padding:80px 0 36px;border-bottom:1px solid var(--line);background:radial-gradient(120% 80% at 50% -10%,rgba(167,139,250,.10),transparent 60%);}
+  .wrap{max-width:880px;margin:0 auto;padding:0 22px 110px;}
+  header{padding:74px 0 34px;border-bottom:1px solid var(--line);background:radial-gradient(120% 80% at 50% -10%,rgba(167,139,250,.11),transparent 60%);}
+  .back{font-family:var(--mono);font-size:12px;color:var(--dim);text-decoration:none;display:inline-block;margin-bottom:16px;}
   .kicker{font-family:var(--mono);font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
-  h1{font-size:46px;line-height:1.05;margin:0 0 16px;letter-spacing:-1px;font-weight:800;}
+  h1{font-size:48px;line-height:1.04;margin:0 0 16px;letter-spacing:-1px;font-weight:800;}
   .lede{font-size:19px;color:var(--dim);max-width:680px;} .lede strong{color:var(--ink);font-weight:600;}
   .tagline{font-family:var(--mono);color:var(--accent);font-size:14px;letter-spacing:1px;margin-top:20px;}
-  h2{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin:58px 0 6px;}
+  h2{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin:60px 0 6px;}
   .h2sub{font-size:25px;font-weight:700;margin:0 0 16px;letter-spacing:-.5px;}
   p{margin:0 0 16px;} .muted{color:var(--dim);} em{color:var(--ink);font-style:normal;border-bottom:1px dashed var(--dim);}
+  code{font-family:var(--mono);font-size:.9em;color:var(--amber);}
+  .runner{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 22px 20px;margin:22px 0;}
+  .runbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .runbar .t{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);}
+  .attempt{font-family:var(--mono);font-size:12px;color:var(--dim);} .attempt b{color:var(--accent);}
+  .track{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;}
+  .stage{flex:1;min-width:78px;border:1px solid var(--line);border-radius:10px;background:#120e1a;padding:11px 7px;text-align:center;transition:all .3s ease;}
+  .stage .sn{font-family:var(--mono);font-size:10.5px;color:var(--dim);transition:color .3s;}
+  .stage .sg{font-size:10px;font-family:var(--mono);color:#534565;margin-top:3px;height:13px;}
+  .stage.active{border-color:var(--accent);background:rgba(167,139,250,.12);box-shadow:0 0 22px -6px var(--accent);}
+  .stage.active .sn{color:var(--ink);}
+  .stage.pass{border-color:var(--ok);} .stage.pass .sg{color:var(--ok);}
+  .stage.fail{border-color:var(--red);background:rgba(224,85,107,.10);} .stage.fail .sg{color:var(--red);} .stage.fail .sn{color:#f4b9c4;}
+  .stage.drop{opacity:.5;border-style:dashed;} .stage.drop .sg{color:var(--amber);}
+  .arrow{display:flex;align-items:center;color:#3f3550;font-size:14px;padding:0 3px;}
+  .console{margin-top:16px;background:#08060c;border:1px solid var(--line);border-radius:10px;padding:13px 15px;font-family:var(--mono);font-size:12px;line-height:1.85;height:150px;overflow:hidden;}
+  .console .ln{white-space:nowrap;} .console .ev{color:var(--dim);} .console .k{color:var(--blue);}
+  .console .pass{color:var(--ok);} .console .fail{color:var(--red);} .console .done{color:var(--amber);}
+  .caption{font-size:12.5px;color:var(--dim);margin-top:14px;line-height:1.5;}
+  .moves{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:22px 0;}
+  .move{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;}
+  .move .num{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;font-weight:700;}
+  .move.e .num{color:var(--amber);} .move.s .num{color:var(--accent);} .move.v .num{color:var(--ok);}
+  .move p{font-size:13.5px;color:var(--dim);margin:0;line-height:1.55;} .move p b{color:var(--ink);font-weight:600;}
   .callout{border-left:3px solid var(--accent);background:rgba(167,139,250,.07);border-radius:0 12px 12px 0;padding:16px 20px;margin:22px 0;font-size:16px;} .callout strong{color:var(--ink);}
-  ol.steps{counter-reset:s;list-style:none;padding:0;margin:18px 0;}
-  ol.steps li{position:relative;padding:12px 0 12px 46px;border-top:1px solid var(--line);} ol.steps li:first-child{border-top:none;}
-  ol.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:12px;font-family:var(--mono);font-size:13px;color:var(--accent);border:1px solid var(--line);border-radius:8px;width:30px;height:30px;display:grid;place-items:center;} ol.steps b{color:var(--ink);}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:22px 0;}
-  .stat{font-family:var(--mono);font-size:13px;color:var(--dim);line-height:2;} .stat b{color:var(--ink);} .stat .done{color:var(--green);} .stat .next{color:var(--accent);}
   footer{margin-top:58px;padding-top:24px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--dim);}
-  @media(max-width:640px){h1{font-size:34px;}}
+  @media(max-width:640px){h1{font-size:34px;} .moves{grid-template-columns:1fr;} .arrow{display:none;} .stage{min-width:44%;}}
 </style>
 </head>
 <body>
 <div class="wrap">
+
 <header>
-  <a href="https://moresalamander.github.io" style="font-family:var(--mono);font-size:12px;color:var(--dim);text-decoration:none;display:inline-block;margin-bottom:16px">&larr; the studio</a>
+  <a class="back" href="https://moresalamander.github.io">&larr; the studio</a>
   <div class="kicker">A MoreSalamander · StudioLabs production</div>
   <h1>my-AI-story</h1>
   <p class="lede">Seed a world — characters, a theme, a loose direction — and my-AI-story writes a
-  <strong>coherent serialized story</strong>, episode after episode, narrated as audio with a
-  <strong>distinct voice for each character</strong>. Everything runs locally; no story leaves the machine.</p>
+  <strong>coherent serialized story</strong>, episode after episode, narrated with a <strong>distinct voice
+  per character</strong>. Every episode is verified against a series bible, so episode 7 still remembers
+  episode 1.</p>
   <div class="tagline">Many episodes, one story. Continuity is the thread.</div>
 </header>
 
-<h2>What it does</h2>
+<h2>What it is</h2>
 <div class="h2sub">A series that remembers itself.</div>
-<p>You give it a seed; it drafts a <em>series bible</em> — the canonical source of truth for characters,
-world facts, and the arc. Then it writes each episode against that bible and narrates it. The hard part of
-long-form generation isn't writing a page — it's writing page 200 without contradicting page 1. That's the
-problem my-AI-story is built to solve.</p>
-<div class="callout">
-  <strong>The sibling of my-AI-stro.</strong> Where my-AI-stro verifies <em>knowledge</em>, my-AI-story
-  verifies <em>narrative continuity</em> — same Deterministic Scaffold thesis, new medium: human-seeded
-  constraints → local-LLM synthesis → verification before anything is kept.
+<p>The hard part of long-form generation isn't writing a page — it's writing page 200 without contradicting
+page 1. my-AI-story drafts a <em>series bible</em> (the canonical source of truth for characters, world
+facts, and the arc), then writes each episode <em>against</em> it and refuses to keep anything that breaks
+canon. Where my-AI-stro verifies knowledge, this verifies <em>narrative continuity</em> — same thesis, new
+medium.</p>
+
+<h2>Watch it run</h2>
+<div class="h2sub">The model drafts an episode; the bible catches what breaks canon.</div>
+<div class="runner" id="runner">
+  <div class="runbar"><span class="t">my-AI-story · live pipeline</span><span class="attempt">attempt <b id="att">1</b></span></div>
+  <div class="track" id="track">
+    <div class="stage" data-s="bible"><div class="sn">bible</div><div class="sg"></div></div><div class="arrow">→</div>
+    <div class="stage" data-s="draft"><div class="sn">draft</div><div class="sg"></div></div><div class="arrow">→</div>
+    <div class="stage" data-s="continuity"><div class="sn">continuity</div><div class="sg">gate ●</div></div><div class="arrow">→</div>
+    <div class="stage" data-s="structure"><div class="sn">structure</div><div class="sg">gate ●</div></div><div class="arrow">→</div>
+    <div class="stage" data-s="speaker"><div class="sn">speaker</div><div class="sg">gate ●</div></div><div class="arrow">→</div>
+    <div class="stage" data-s="tts"><div class="sn">tts</div><div class="sg"></div></div><div class="arrow">→</div>
+    <div class="stage" data-s="cue"><div class="sn">cue</div><div class="sg">gate ○</div></div><div class="arrow">→</div>
+    <div class="stage" data-s="mixed"><div class="sn">mixed WAV</div><div class="sg"></div></div>
+  </div>
+  <div class="console" id="console"></div>
+  <div class="caption">Three <strong>blocking ●</strong> gates protect the story: continuity (consistent with
+  the bible), structure (beats well-formed), speaker (every line assigned to a character). Sound cues are
+  non-blocking — an unresolvable bed is dropped, never fails the episode. Continuity is the premise.</div>
 </div>
 
-<h2>How an episode is made</h2>
-<div class="h2sub">Draft, verify against canon, narrate, update canon.</div>
-<ol class="steps">
-  <li><b>Seed.</b> Title, theme, characters, a loose plot direction, episode count and length.</li>
-  <li><b>Series bible.</b> A canonical source of truth is drafted — the world's facts, the cast, the arc.</li>
-  <li><b>Draft + verify.</b> A local LLM writes prose and speaker-tagged dialogue; it's checked against the bible before a word is kept — no quiet contradictions.</li>
-  <li><b>Narrate.</b> Verified episodes are rendered to audio with a per-character voice via a local TTS engine, then stitched into one narrated episode.</li>
-  <li><b>Update canon.</b> New facts — a death, a reveal, a new character — are fed back into the bible through a verified update, so the next episode still remembers this one.</li>
-</ol>
+<h2>The three moves</h2>
+<div class="h2sub">Explain · Synthesize · Verify — against canon.</div>
+<div class="moves">
+  <div class="move e"><div class="num">01 · Explain</div><p>The <b>series bible</b> — canonical characters, world facts, and the arc — is the source of truth. New canon (a death, a reveal) is folded back in through a verified update, so the constraints grow with the story.</p></div>
+  <div class="move s"><div class="num">02 · Synthesize</div><p>A local LLM drafts <b>prose and speaker-tagged dialogue</b> for each episode; a local TTS engine renders a distinct voice per character and stitches them into one narrated episode.</p></div>
+  <div class="move v"><div class="num">03 · Verify</div><p>Before a word is kept: <b>continuity</b> against the bible, <b>structure</b> of the beats, and <b>speaker</b> assignment — all blocking. No quiet contradictions; episode 7 still remembers episode 1.</p></div>
+</div>
 
-<h2>Why it's built this way</h2>
-<div class="h2sub">Local-first, and verified — not vibes.</div>
-<p>Synthesis runs on <em>Ollama</em>; voices on a local/open-source <em>TTS engine</em>; storage is the
-filesystem. No API keys to generate, nothing sent to the cloud. And continuity isn't left to the model's
-memory — it's a checkable artifact (the bible) the system holds the writing to, the same way its siblings
-hold code, video, or knowledge to a deterministic gate.</p>
+<h2>Best at — and the honest limit</h2>
+<div class="h2sub">Long-running coherence, narrated.</div>
+<p>my-AI-story holds a serialized world together across many episodes and renders it as multi-voice audio,
+entirely on local models — Ollama for synthesis, a local TTS for voices. Nothing leaves the machine.</p>
+<div class="callout"><strong>What it can't do:</strong> the gates verify <em>consistency</em> — that the
+story doesn't contradict itself — not that the prose is <em>great writing</em>. It guarantees continuity, and
+is honest that voice and craft are a human's to judge.</div>
 
 <footer>
   my-AI-story — a MoreSalamander · StudioLabs production. &nbsp;|&nbsp;
   <a href="https://moresalamander.github.io">The studio ↗</a> &nbsp;·&nbsp;
+  <a href="https://moresalamander.github.io/projects.html">All projects ↗</a> &nbsp;·&nbsp;
   <a href="https://github.com/MoreSalamander/myAIstory">GitHub ↗</a>
   <br>Many episodes, one story.
 </footer>
 </div>
+
+<script>
+(function(){
+  const stages=[...document.querySelectorAll('.stage')], byId=id=>stages.find(s=>s.dataset.s===id);
+  const con=document.getElementById('console'),att=document.getElementById('att');
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const F=reduced?0.12:1;
+  function clear(){stages.forEach(s=>s.classList.remove('active','pass','fail','drop'));}
+  function log(t,c){const l=document.createElement('div');l.className='ln';l.innerHTML='<span class="ev">'+t+'</span>';if(c)l.querySelector('.ev').className=c;con.appendChild(l);while(con.children.length>7)con.removeChild(con.firstChild);}
+  async function run(id,note){clear();byId(id).classList.add('active');log('<span class="k">step_start</span> '+id);await sleep(560*F);if(note)log('<span class="k">'+note+'</span>');log('<span class="k">step_complete</span> '+id);await sleep(340*F);}
+  async function gate(id,ok,note){clear();const el=byId(id);el.classList.add('active');log('<span class="k">gate_check</span> '+id);await sleep(680*F);el.classList.remove('active');el.classList.add(ok?'pass':'fail');el.querySelector('.sg').textContent=ok?'pass ✓':'fail ✕';log((ok?'gate_pass ':'gate_fail ')+id+(note?' · '+note:''),ok?'pass':'fail');await sleep(760*F);}
+  async function drop(id,note){clear();const el=byId(id);el.classList.add('drop');el.querySelector('.sg').textContent='dropped ○';log('gate_fail '+id+' · '+note+' → continue','fail');await sleep(740*F);}
+  function reset(n){con.innerHTML='';clear();stages.forEach(s=>{const g=s.querySelector('.sg');const d=s.dataset.s;g.textContent=(d==='continuity'||d==='structure'||d==='speaker')?'gate ●':(d==='cue'?'gate ○':'');});att.textContent=n;}
+  async function loop(){while(true){
+    reset(1);await sleep(500*F);
+    await run('bible','load series bible');
+    await run('draft','LLM drafts episode 7');
+    await gate('continuity',false,'Mara’s eyes ≠ bible (brown)');
+    log('retry ↺ feedback → redraft','fail');await sleep(1100*F);
+    reset(2);await sleep(380*F);
+    await run('draft','redraft to canon');
+    await gate('continuity',true,'consistent w/ bible');
+    await gate('structure',true,'beats well-formed');
+    await gate('speaker',true,'all lines assigned');
+    await run('tts','per-character voices');
+    await drop('cue','ambient bed missing');
+    clear();byId('mixed').classList.add('active','pass');byId('mixed').querySelector('.sg').textContent='✓ mixed';
+    log('<span class="done">done</span> episode_07.wav');await sleep(3200*F);
+  }}
+  loop();
+})();
+</script>
 </body>
 </html>
